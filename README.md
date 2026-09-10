@@ -25,6 +25,18 @@ This repository is a **learning lab**, not just documentation. Every concept cov
 
 ---
 
+## 🏗️ Architecture
+
+Curious how it all fits together? See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the visual diagrams:
+
+- Layered architecture (UI → Automation → Apex → Data)
+- Full data model (ER diagram: standard + custom objects)
+- Trigger → Service wiring
+- End-to-end sales process flow
+- Integration & certification-prep architectures
+
+---
+
 ## 🧭 The 20-Week Learning Roadmap
 
 | Phase | Topic | Guide | Key Concepts |
