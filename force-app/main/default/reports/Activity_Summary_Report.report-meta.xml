@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Activity_Summary_Report</fullName>
+    <label>Activity Summary Report</label>
+    <folder>Sales_Cloud_Reports</folder>
+    <reportFormat>summary</reportFormat>
+    <reportType>Task</reportType>
+    <columns>
+        <name>Activity_Type__c</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Outcome__c</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Subject</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>Who</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>What</name>
+        <type>detail</type>
+    </columns>
+    <filter>
+        <criteriaItems>
+            <field>CreatedDate</field>
+            <operator>equals

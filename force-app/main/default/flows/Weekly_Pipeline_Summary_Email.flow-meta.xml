@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Weekly_Pipeline_Summary_Email</fullName>
+    <label>Weekly Pipeline Summary Email</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Get_Open_Opportunities</targetReference>
+        </connector>
+        <schedule>
+            <startDate>2026-01-05</startDate>
+            <startTime>09:00:00.000Z</startTime>
+            <weeklyFrequency>
+                <daysOfWeek>
+                    <day>Monday</day>
+                </daysOfWeek>
+            </weeklyFrequency>
+        </schedule>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <nodes>
+        <name>Get_Open_Opportunities</name>
+        <label>Get Open Opportunities</label>
+        <connector>
+            <targetReference>Send_Pipeline_Email</targetReference>
+        </connector>
+        <filterFormula>StageName NOT IN (&apos;Closed Won&apos;, &apos;Closed Lost&apos;)</filterFormula>
+        <object>Opportunity</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>Name</name>
+        </query>
+        <query>
+            <name>Amount</name>
+        </query>
+        <query>
+            <name>StageName</name>
+        </query>
+        <query>
+            <name>CloseDate</name>
+        </query>
+        <query>
+            <name>Owner.Name</name>
+        </query>
+        <sortOrder>Desc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Send_Pipeline_Email</name>
+        <label>Send Pipeline Summary Email</label>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Weekly Pipeline Summary - {!$Flow.CurrentDate}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Body</name>
+            <value>
+                <elementReference>Sales Team,
+
+Here is your weekly pipeline summary:
+
+Total Open Deals: {!Get_Open_Opportunities.size}
+Total Pipeline Value: {!$Record.Amount}
+
+Please review your opportunities and update forecast by end of week.
+
+Best regards,
+Sales Operations</elementReference>
+            </value>
+        </inputParameters>
+        <operationType>SendEmail</operationType>
+    </nodes>
+</Flow>

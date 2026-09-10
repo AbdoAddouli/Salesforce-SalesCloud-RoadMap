@@ -1,0 +1,75 @@
+// ============================================
+// SOQL Practice Queries - Phase 2: Lead Management
+// ============================================
+
+// 1. Leads scored and ranked
+SELECT Name, Company, Lead_Score__c, Rating, Nurture_Status__c, Status
+FROM Lead
+WHERE IsConverted = false
+ORDER BY Lead_Score__c DESC
+
+// 2. Leads by industry with score
+SELECT Industry, COUNT(Name) leadCount, AVG(Lead_Score__c) avgScore
+FROM Lead
+WHERE IsConverted = false
+GROUP BY Industry
+ORDER BY avgScore DESC
+
+// 3. Hot leads needing immediate attention
+SELECT Name, Company, Email, Phone, Lead_Score__c, LastActivityDate
+FROM Lead
+WHERE Rating = 'Hot'
+AND IsConverted = false
+ORDER BY CreatedDate DESC
+
+// 4. Leads by source with conversion rate
+SELECT LeadSource,
+       COUNT(Name) totalLeads,
+       SUM(CASE WHEN IsConverted = true THEN 1 ELSE 0 END) converted,
+       ROUND(SUM(CASE WHEN IsConverted = true THEN 1 ELSE 0 END) * 100.0 / COUNT(Name), 1) conversionRate
+FROM Lead
+GROUP BY LeadSource
+ORDER BY conversionRate DESC
+
+// 5. Leads with no activity (stale leads)
+SELECT Name, Company, Lead_Score__c, LastActivityDate, CreatedDate
+FROM Lead
+WHERE IsConverted = false
+AND (LastActivityDate = NULL OR LastActivityDate < LAST_30_DAYS)
+ORDER BY Lead_Score__c DESC
+
+// 6. Leads by nurture status
+SELECT Nurture_Status__c, COUNT(Name) leadCount, AVG(Lead_Score__c) avgScore
+FROM Lead
+WHERE IsConverted = false
+GROUP BY Nurture_Status__c
+
+// 7. Recently converted leads with their opportunities
+SELECT Name, Company, ConvertedDate,
+       ConvertedAccount.Name, ConvertedContact.Name, ConvertedOpportunity.Name
+FROM Lead
+WHERE IsConverted = true
+ORDER BY ConvertedDate DESC
+
+// 8. Lead scoring distribution
+SELECT Lead_Score__c, COUNT(Name) cnt
+FROM Lead
+WHERE IsConverted = false
+GROUP BY Lead_Score__c
+ORDER BY Lead_Score__c DESC
+
+// 9. Leads by region (state)
+SELECT State, COUNT(Name) leadCount, AVG(Lead_Score__c) avgScore
+FROM Lead
+WHERE IsConverted = false AND State != NULL
+GROUP BY State
+ORDER BY leadCount DESC
+
+// 10. Top leads with full details
+SELECT Name, Company, Industry, AnnualRevenue, LeadSource,
+       Email, Phone, Lead_Score__c, Rating, Nurture_Status__c,
+       Owner.Name, CreatedDate
+FROM Lead
+WHERE IsConverted = false
+AND Lead_Score__c > 50
+ORDER BY Lead_Score__c DESC

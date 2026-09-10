@@ -1,0 +1,66 @@
+// ============================================
+// SOQL Practice Queries - Phase 3: Account & Contact Management
+// ============================================
+
+// 1. Account hierarchy traversal
+SELECT Name, Parent.Name, Parent.Parent.Name, Parent.Parent.Parent.Name, Account_Level__c
+FROM Account
+ORDER BY Name
+
+// 2. Accounts with child accounts
+SELECT Name, (SELECT Name FROM ChildAccounts) FROM Account WHERE Id IN (SELECT ParentId FROM Account)
+
+// 3. Accounts with revenue metrics
+SELECT Name, Total_Opportunities__c, Total_Revenue_Won__c, Pipeline_Value__c,
+       Health_Score__c, Number_of_Contacts__c
+FROM Account
+ORDER BY Total_Revenue_Won__c DESC NULLS LAST
+
+// 4. Contacts per account with roles
+SELECT Account.Name, COUNT(Id) contactCount,
+       MAX(Engagement_Score__c) maxEngagement
+FROM Contact
+WHERE AccountId != NULL
+GROUP BY Account.Name
+ORDER BY contactCount DESC
+LIMIT 10
+
+// 5. Account team members
+SELECT Account.Name, TeamMemberRole, User.Name
+FROM AccountTeamMember
+ORDER BY Account.Name
+
+// 6. Contact roles on opportunities
+SELECT Opportunity.Name, Contact.Name, Role
+FROM OpportunityContactRole
+ORDER BY Opportunity.Name
+
+// 7. Accounts without any contacts
+SELECT Name FROM Account
+WHERE Id NOT IN (SELECT AccountId FROM Contact)
+
+// 8. Accounts with won opportunities
+SELECT Name, Total_Revenue_Won__c, Last_Won_Opportunity_Date__c,
+       (SELECT Name, Amount FROM Opportunities WHERE StageName = 'Closed Won')
+FROM Account
+WHERE Total_Revenue_Won__c > 0
+ORDER BY Total_Revenue_Won__c DESC
+
+// 9. Contact engagement summary by account
+SELECT Account.Name,
+       AVG(Engagement_Score__c) avgEngagement,
+       COUNT(Id) contactCount
+FROM Contact
+WHERE AccountId != NULL AND Engagement_Score__c != NULL
+GROUP BY Account.Name
+ORDER BY avgEngagement DESC
+
+// 10. Full account 360 view
+SELECT Name, Industry, AnnualRevenue, Account_Level__c,
+       Health_Score__c, Customer_Since__c,
+       Total_Revenue_Won__c, Pipeline_Value__c,
+       Parent.Name, Ultimate_Parent__c,
+       (SELECT Name, Role__c, Engagement_Score__c FROM Contacts),
+       (SELECT Name, Amount, StageName, CloseDate FROM Opportunities ORDER BY CloseDate DESC)
+FROM Account
+WHERE Name = 'Global Corp'

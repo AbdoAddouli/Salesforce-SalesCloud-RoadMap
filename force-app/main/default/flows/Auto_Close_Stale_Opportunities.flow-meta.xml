@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Auto_Close_Stale_Opportunities</fullName>
+    <label>Auto Close Stale Opportunities</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Get_Stale_Opportunities</targetReference>
+        </connector>
+        <schedule>
+            <startDate>2026-01-06</startDate>
+            <startTime>08:00:00.000Z</startTime>
+            <weeklyFrequency>
+                <daysOfWeek>
+                    <day>Monday</day>
+                </daysOfWeek>
+            </weeklyFrequency>
+        </schedule>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <nodes>
+        <name>Get_Stale_Opportunities</name>
+        <label>Get Stale Opportunities (No Activity 30+ Days)</label>
+        <connector>
+            <targetReference>Close_Stale_Opps</targetReference>
+        </connector>
+        <filterFormula>StageName NOT IN (&apos;Closed Won&apos;, &apos;Closed Lost&apos;) &amp;&amp; LastActivityDate != NULL &amp;&amp; LastActivityDate &lt; TODAY - 30</filterFormula>
+        <object>Opportunity</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>Name</name>
+        </query>
+        <query>
+            <name>Amount</name>
+        </query>
+        <query>
+            <name>LastActivityDate</name>
+        </query>
+        <query>
+            <name>OwnerId</name>
+        </query>
+        <sortOrder>Asc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Close_Stale_Opps</name>
+        <label>Mark Stale Opportunities as Closed Lost</label>
+        <inputParameters>
+            <name>StageName</name>
+            <value>
+                <elementReference>Closed Lost</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Auto-closed: No activity for 30+ days. Last activity: {!Get_Stale_Opportunities.LastActivityDate}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Opportunity</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+</Flow>

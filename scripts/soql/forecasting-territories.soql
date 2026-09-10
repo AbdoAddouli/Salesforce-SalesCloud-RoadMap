@@ -1,0 +1,101 @@
+// ============================================
+// SOQL Practice Queries - Phase 8: Forecasting & Territories
+// ============================================
+
+// 1. Forecast summary by user
+SELECT Owner.Name, Forecast_Category__c,
+       COUNT(Name) dealCount, SUM(Amount) totalAmount, SUM(Weighted_Forecast__c) weightedTotal
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Lost')
+AND CloseDate = THIS_QUARTER
+GROUP BY Owner.Name, Forecast_Category__c
+ORDER BY Owner.Name, totalAmount DESC
+
+// 2. Pipeline by territory
+SELECT Territory__c, COUNT(Name) dealCount, SUM(Amount) pipelineValue,
+       AVG(Weighted_Forecast__c) avgWeighted
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+GROUP BY Territory__c
+ORDER BY pipelineValue DESC
+
+// 3. Quota attainment by user
+SELECT User__c, User__r.Name, Amount__c quotaAmount,
+       (SELECT SUM(Amount) FROM Opportunities__r WHERE StageName = 'Closed Won') actualRevenue
+FROM Quota__c
+WHERE Period_Start__c = THIS_QUARTER
+
+// 4. Top forecast categories
+SELECT Forecast_Category__c, COUNT(Name) dealCount,
+       SUM(Amount) totalValue, SUM(Weighted_Forecast__c) weightedValue
+FROM Opportunity
+WHERE Forecast_Category__c != NULL
+AND StageName NOT IN ('Closed Lost')
+GROUP BY Forecast_Category__c
+ORDER BY totalValue DESC
+
+// 5. Pipeline coverage by rep
+SELECT Owner.Name,
+       SUM(CASE WHEN StageName NOT IN ('Closed Won', 'Closed Lost') THEN Amount ELSE 0 END) pipeline,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) closedWon
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+GROUP BY Owner.Name
+
+// 6. Territory performance
+SELECT Territory__c,
+       COUNT(Id) totalDeals,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) revenue,
+       AVG(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) avgDealSize
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+GROUP BY Territory__c
+ORDER BY revenue DESC
+
+// 7. Forecast accuracy (committed vs actual)
+SELECT Owner.Name,
+       SUM(CASE WHEN Forecast_Category__c = 'Commit' THEN Amount ELSE 0 END) committed,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) actualWon
+FROM Opportunity
+WHERE CloseDate = LAST_QUARTER
+GROUP BY Owner.Name
+
+// 8. Weighted forecast trend
+SELECT CALENDAR_MONTH(CloseDate) month, CALENDAR_YEAR(CloseDate) year,
+       SUM(Weighted_Forecast__c) weightedForecast,
+       SUM(Amount) totalPipeline
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Lost')
+AND CloseDate = LAST_N_MONTHS:6
+GROUP BY CALENDAR_MONTH(CloseDate), CALENDAR_YEAR(CloseDate)
+ORDER BY year, month
+
+// 9. Deals by probability range
+SELECT CASE
+         WHEN Probability >= 90 THEN '90-100%'
+         WHEN Probability >= 70 THEN '70-89%'
+         WHEN Probability >= 50 THEN '50-69%'
+         WHEN Probability >= 30 THEN '30-49%'
+         ELSE '0-29%'
+       END probabilityRange,
+       COUNT(Name) dealCount, SUM(Amount) totalValue
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+GROUP BY CASE
+           WHEN Probability >= 90 THEN '90-100%'
+           WHEN Probability >= 70 THEN '70-89%'
+           WHEN Probability >= 50 THEN '50-69%'
+           WHEN Probability >= 30 THEN '30-49%'
+           ELSE '0-29%'
+         END
+ORDER BY totalValue DESC
+
+// 10. Full forecast dashboard query
+SELECT Name, Amount, StageName, Probability,
+       Forecast_Category__c, Weighted_Forecast__c,
+       Territory__c, Owner.Name, CloseDate,
+       Account.Name, Account.Industry
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Lost')
+AND CloseDate = THIS_QUARTER
+ORDER BY Forecast_Category__c, Amount DESC

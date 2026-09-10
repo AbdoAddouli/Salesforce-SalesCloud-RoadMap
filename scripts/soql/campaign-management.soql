@@ -1,0 +1,77 @@
+// ============================================
+// SOQL Practice Queries - Phase 5: Campaigns & Marketing
+// ============================================
+
+// 1. Campaigns with member counts
+SELECT Name, Type, Status, Total_Members__c, Responded_Members__c,
+       Conversion_Rate__c, ROI__c, Cost_Per_Lead__c
+FROM Campaign
+ORDER BY StartDate DESC
+
+// 2. Campaign members by status
+SELECT Campaign.Name, Status, COUNT(Id) memberCount
+FROM CampaignMember
+GROUP BY Campaign.Name, Status
+ORDER BY Campaign.Name, memberCount DESC
+
+// 3. Campaigns with most responded members
+SELECT Campaign.Name,
+       COUNT(Id) totalMembers,
+       SUM(CASE WHEN Status = 'Responded' THEN 1 ELSE 0 END) responded,
+       ROUND(SUM(CASE WHEN Status = 'Responded' THEN 1 ELSE 0 END) * 100.0 / COUNT(Id), 1) responseRate
+FROM CampaignMember
+GROUP BY Campaign.Name
+ORDER BY responseRate DESC
+
+// 4. Campaign ROI comparison
+SELECT Name, Type, ActualCost__c, Total_Revenue_Generated__c, ROI__c
+FROM Campaign
+WHERE Status = 'Completed'
+ORDER BY ROI__c DESC
+
+// 5. Campaign influence on opportunities
+SELECT Campaign.Name, Opportunity.Name, Opportunity.Amount, Opportunity.StageName
+FROM CampaignMember
+WHERE OpportunityId != NULL
+ORDER BY Campaign.Name, Opportunity.Amount DESC
+
+// 6. Revenue generated per campaign type
+SELECT Campaign.Type,
+       SUM(CASE WHEN Opportunity.StageName = 'Closed Won' THEN Opportunity.Amount ELSE 0 END) revenue,
+       COUNT(DISTINCT CampaignId) campaignCount
+FROM CampaignMember
+WHERE OpportunityId != NULL
+GROUP BY Campaign.Type
+ORDER BY revenue DESC
+
+// 7. Cost per lead by campaign
+SELECT Name, Type, ActualCost__c, Total_Members__c, Cost_Per_Lead__c
+FROM Campaign
+WHERE ActualCost__c > 0 AND Total_Members__c > 0
+ORDER BY Cost_Per_Lead__c ASC
+
+// 8. Contacts NOT in any campaign (untouched leads)
+SELECT Name, Email, Account.Name
+FROM Contact
+WHERE Id NOT IN (SELECT ContactId FROM CampaignMember)
+AND AccountId != NULL
+ORDER BY Name
+
+// 9. Campaign member activity timeline
+SELECT Contact.Name, Campaign.Name, Status, CreatedDate,
+       LastModifiedDate
+FROM CampaignMember
+WHERE Campaign.Name = '2026 Tech Conference'
+ORDER BY CreatedDate DESC
+
+// 10. Full campaign performance dashboard query
+SELECT Name, Type, Status, StartDate, EndDate,
+       Budget__c, ActualCost__c, Budget_Used__c,
+       Total_Members__c, Responded_Members__c,
+       Conversion_Rate__c, Total_Revenue_Generated__c,
+       ROI__c, Cost_Per_Lead__c,
+       (SELECT Contact.Name, Status FROM CampaignMembers),
+       (SELECT Name, Amount, StageName FROM Opportunities)
+FROM Campaign
+WHERE StartDate = THIS_YEAR
+ORDER BY StartDate DESC

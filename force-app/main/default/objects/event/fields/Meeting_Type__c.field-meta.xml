@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Meeting_Type__c</fullName>
+    <externalId>false</externalId>
+    <label>Meeting Type</label>
+    <length>255</length>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Discovery</fullName>
+                <default>false</default>
+                <label>Discovery</label>
+            </value>
+            <value>
+                <fullName>Demo</fullName>
+                <default>false</default>
+                <label>Demo</label>
+            </value>
+            <value>
+                <fullName>Technical Review</fullName>
+                <default>false</default>
+                <label>Technical Review</label>
+            </value>
+            <value>
+                <fullName>Executive Briefing</fullName>
+                <default>false</default>
+                <label>Executive Briefing</label>
+            </value>
+            <value>
+                <fullName>Negotiation</fullName>
+                <default>false</default>
+                <label>Negotiation</label>
+            </value>
+            <value>
+                <fullName>On-Site Visit</fullName>
+                <default>false</default>
+                <label>On-Site Visit</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+    <visibilityPublic</visibilityPublic>
+</CustomField>

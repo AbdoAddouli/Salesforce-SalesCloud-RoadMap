@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Certification_Type__c</fullName>
+    <externalId>false</externalId>
+    <label>Certification Type</label>
+    <length>255</length>
+    <required>true</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Salesforce Administrator</fullName>
+                <default>false</default>
+                <label>Salesforce Administrator</label>
+            </value>
+            <value>
+                <fullName>Salesforce Advanced Administrator</fullName>
+                <default>false</default>
+                <label>Salesforce Advanced Administrator</label>
+            </value>
+            <value>
+                <fullName>Sales Cloud Consultant</fullName>
+                <default>false</default>
+                <label>Sales Cloud Consultant</label>
+            </value>
+            <value>
+                <fullName>Platform App Builder</fullName>
+                <default>false</default>
+                <label>Platform App Builder</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+    <visibilityPublic</visibilityPublic>
+</CustomField>

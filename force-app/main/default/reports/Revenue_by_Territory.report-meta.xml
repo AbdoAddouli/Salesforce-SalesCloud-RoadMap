@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Revenue_by_Territory</fullName>
+    <label>Revenue by Territory</label>
+    <folder>Sales_Cloud_Reports</folder>
+    <reportFormat>summary</reportFormat>
+    <reportType>Opportunity</reportType>
+    <columns>
+        <name>Territory__c</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Amount</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <columns>
+        <name>CloseDate</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>Owner</name>
+        <type>detail</type>
+    </columns>
+    <filter>
+        <criteriaItems>
+            <field>StageName</field>
+            <operator>equals</operator>
+            <value>Closed Won</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>CloseDate</field>
+            <operator>equals

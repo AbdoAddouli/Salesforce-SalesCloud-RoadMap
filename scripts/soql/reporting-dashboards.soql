@@ -1,0 +1,116 @@
+// ============================================
+// SOQL Practice Queries - Phase 9: Reporting & Dashboards
+// ============================================
+
+// 1. Pipeline summary by forecast category
+SELECT Forecast_Category__c, COUNT(Name) dealCount,
+       SUM(Amount) totalValue, AVG(Probability) avgProbability
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Lost')
+AND CloseDate = THIS_QUARTER
+GROUP BY Forecast_Category__c
+ORDER BY totalValue DESC
+
+// 2. Win rate by rep
+SELECT Owner.Name,
+       COUNT(Id) totalDeals,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN 1 ELSE 0 END) wonDeals,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) wonRevenue
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+AND StageName IN ('Closed Won', 'Closed Lost')
+GROUP BY Owner.Name
+
+// 3. Deal velocity by territory
+SELECT Territory__c,
+       AVG(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) avgDealSize,
+       COUNT(CASE WHEN StageName = 'Closed Won' THEN 1 END) wonCount,
+       COUNT(CASE WHEN StageName = 'Closed Lost' THEN 1 END) lostCount
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+GROUP BY Territory__c
+
+// 4. Monthly revenue trend
+SELECT CALENDAR_MONTH(CloseDate) month, CALENDAR_YEAR(CloseDate) year,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) revenue,
+       COUNT(CASE WHEN StageName = 'Closed Won' THEN 1 END) dealsWon,
+       COUNT(CASE WHEN StageName = 'Closed Lost' THEN 1 END) dealsLost
+FROM Opportunity
+WHERE CloseDate = LAST_N_MONTHS:6
+GROUP BY CALENDAR_MONTH(CloseDate), CALENDAR_YEAR(CloseDate)
+ORDER BY year, month
+
+// 5. Industry analysis
+SELECT Account.Industry,
+       COUNT(Name) totalDeals, SUM(Amount) totalValue,
+       AVG(Amount) avgDealSize,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN Amount ELSE 0 END) wonRevenue
+FROM Opportunity
+WHERE Account.Industry != NULL
+GROUP BY Account.Industry
+ORDER BY totalValue DESC
+
+// 6. Lead source effectiveness
+SELECT LeadSource,
+       COUNT(Name) totalLeads,
+       SUM(CASE WHEN IsConverted = true THEN 1 ELSE 0 END) converted,
+       AVG(Lead_Score__c) avgScore
+FROM Lead
+GROUP BY LeadSource
+ORDER BY totalLeads DESC
+
+// 7. Account revenue ranking
+SELECT Name, Industry, AnnualRevenue,
+       Total_Revenue_Won__c, Pipeline_Value__c, Total_Opportunities__c
+FROM Account
+WHERE AnnualRevenue > 0
+ORDER BY AnnualRevenue DESC
+LIMIT 20
+
+// 8. Close date distribution
+SELECT CALENDAR_MONTH(CloseDate) month,
+       COUNT(Name) dealCount,
+       SUM(Amount) totalValue
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Lost')
+AND CloseDate = THIS_QUARTER
+GROUP BY CALENDAR_MONTH(CloseDate)
+ORDER BY month
+
+// 9. Activity metrics by type
+SELECT Activity_Type__c,
+       COUNT(Id) totalActivities,
+       AVG(Call_Duration_Minutes__c) avgDuration,
+       SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) completed
+FROM Task
+WHERE CreatedDate = THIS_QUARTER
+GROUP BY Activity_Type__c
+
+// 10. Campaign performance summary
+SELECT Campaign.Name, Campaign.Type, Campaign.Status,
+       COUNT(CampaignMembers) totalMembers,
+       SUM(CASE WHEN HasResponded = true THEN 1 ELSE 0 END) responded,
+       SUM(CASE WHEN IsConverted = true THEN 1 ELSE 0 END) converted
+FROM CampaignMember
+GROUP BY Campaign.Name, Campaign.Type, Campaign.Status
+ORDER BY totalMembers DESC
+
+// 11. Discount impact analysis
+SELECT Forecast_Category__c,
+       AVG(Discount_Percentage__c) avgDiscount,
+       SUM(Amount) totalRevenue,
+       AVG(Probability) avgProbability
+FROM Opportunity
+WHERE Discount_Percentage__c > 0
+AND StageName NOT IN ('Closed Lost')
+GROUP BY Forecast_Category__c
+
+// 12. Full sales dashboard query
+SELECT Name, Amount, StageName, Probability,
+       Forecast_Category__c, Territory__c,
+       Account.Name, Account.Industry,
+       Owner.Name, CloseDate,
+       CreatedDate, LastModifiedDate
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+ORDER BY CloseDate ASC

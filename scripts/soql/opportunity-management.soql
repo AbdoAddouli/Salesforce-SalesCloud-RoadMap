@@ -1,0 +1,80 @@
+// ============================================
+// SOQL Practice Queries - Phase 4: Opportunity Management
+// ============================================
+
+// 1. Full pipeline view
+SELECT Name, Amount, StageName, Probability, CloseDate, Account.Name, Owner.Name
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+ORDER BY Amount DESC
+
+// 2. Pipeline by stage with totals
+SELECT StageName, COUNT(Name) dealCount, SUM(Amount) totalValue, AVG(Probability) avgProb
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+GROUP BY StageName
+ORDER BY totalValue DESC
+
+// 3. Win rate by quarter
+SELECT CALENDAR_QUARTER(CloseDate) quarter, CALENDAR_YEAR(CloseDate) year,
+       SUM(CASE WHEN StageName = 'Closed Won' THEN 1 ELSE 0 END) wins,
+       SUM(CASE WHEN StageName = 'Closed Lost' THEN 1 ELSE 0 END) losses,
+       ROUND(SUM(CASE WHEN StageName = 'Closed Won' THEN 1 ELSE 0 END) * 100.0 /
+             NULLIF(SUM(CASE WHEN StageName IN ('Closed Won', 'Closed Lost') THEN 1 ELSE 0 END), 0), 1) winRate
+FROM Opportunity
+WHERE CloseDate = LAST_N_QUARTERS:4
+GROUP BY CALENDAR_QUARTER(CloseDate), CALENDAR_YEAR(CloseDate)
+ORDER BY year, quarter
+
+// 4. Top 10 deals this quarter
+SELECT Name, Amount, StageName, CloseDate, Account.Name
+FROM Opportunity
+WHERE CloseDate = THIS_QUARTER
+AND StageName NOT IN ('Closed Lost')
+ORDER BY Amount DESC
+LIMIT 10
+
+// 5. Average deal size by stage
+SELECT StageName, AVG(Amount) avgAmount, MIN(Amount) minAmount, MAX(Amount) maxAmount
+FROM Opportunity
+WHERE StageName = 'Closed Won'
+GROUP BY StageName
+
+// 6. Sales cycle length
+SELECT Name, CreatedDate, CloseDate,
+       DAY8(N_CLOSEDATE) - DAY8(CREATEDDATE) cycleDays
+FROM Opportunity
+WHERE StageName = 'Closed Won'
+AND CloseDate = THIS_QUARTER
+ORDER BY cycleDays DESC
+
+// 7. Deals at risk (no recent activity)
+SELECT Name, Amount, StageName, LastActivityDate, Days_Open__c
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+AND LastActivityDate < LAST_30_DAYS
+ORDER BY Amount DESC
+
+// 8. Revenue forecast
+SELECT StageName, SUM(Amount) weightedAmount
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+AND CloseDate = THIS_QUARTER
+GROUP BY StageName
+
+// 9. Lost deals analysis
+SELECT Name, Amount, CloseDate, Account.Name, Loss_Reason__c
+FROM Opportunity
+WHERE StageName = 'Closed Lost'
+AND CloseDate = THIS_QUARTER
+ORDER BY Amount DESC
+
+// 10. Opportunity with full context
+SELECT Name, Amount, StageName, Probability, CloseDate,
+       Account.Name, Account.Industry, Account.AnnualRevenue,
+       Owner.Name, Owner.Manager.Name,
+       (SELECT Contact.Name, Role FROM OpportunityContactRoles),
+       (SELECT Product2.Name, UnitPrice, Quantity FROM OpportunityLineItems)
+FROM Opportunity
+WHERE Name LIKE 'Deal %'
+ORDER BY Amount DESC

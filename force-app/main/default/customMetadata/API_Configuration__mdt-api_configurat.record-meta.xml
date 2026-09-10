@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>API_Configuration__mdt</fullName>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Stores API configuration for external integrations</description>
+    <label>API Configuration</label>
+    <pluralLabel>API Configurations</pluralLabel>
+    <fields>
+        <fullName>Endpoint_URL__c</fullName>
+        <externalId>false</externalId>
+        <label>Endpoint URL</label>
+        <length>255</length>
+        <required>true</required>
+        <type>Text</type>
+    </fields>
+    <fields>
+        <fullName>API_Key__c</fullName>
+        <externalId>false</externalId>
+        <label>API Key</label>
+        <length>255</length>
+        <required>false</required>
+        <type>Text</type>
+    </fields>
+    <fields>
+        <fullName>Timeout__c</fullName>
+        <externalId>false</externalId>
+        <label>Timeout (seconds)</label>
+        <precision>3</precision>
+        <scale>0</scale>
+        <defaultValue>30</defaultValue>
+        <required>false</required>
+        <type>Number</type>
+    </fields>
+    <fields>
+        <fullName>Active__c</fullName>
+        <externalId>false</externalId>
+        <label>Active</label>
+        <defaultValue>true</defaultValue>
+        <required>false</required>
+        <type>Checkbox</type>
+    </fields>
+</CustomObject>

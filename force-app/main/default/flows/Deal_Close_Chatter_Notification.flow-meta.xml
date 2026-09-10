@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Deal_Close_Chatter_Notification</fullName>
+    <label>Deal Close Chatter Notification</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Check_Closed_Won</targetReference>
+        </connector>
+        <object>Opportunity</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <nodes>
+        <name>Check_Closed_Won</name>
+        <label>Check if Closed Won</label>
+        <connector>
+            <targetReference>Post_Deal_Closed</targetReference>
+        </connector>
+        <filterFormula>ISPICKVAL(StageName, &apos;Closed Won&apos;)</filterFormula>
+        <object>Opportunity</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>Name</name>
+        </query>
+        <query>
+            <name>Amount</name>
+        </query>
+        <query>
+            <name>OwnerId</name>
+        </query>
+        <query>
+            <name>Account.Name</name>
+        </query>
+        <query>
+            <name>CloseDate</name>
+        </query>
+        <sortOrder>Asc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Post_Deal_Closed</name>
+        <label>Post Deal Closed to Chatter</label>
+        <connector>
+            <targetReference>Create_Celebration_Task</targetReference>
+        </connector>
+        <inputParameters>
+            <name>FeedItemBody</name>
+            <value>
+                <elementReference>DEAL CLOSED WON! {!Check_Closed_Won.Name} with {!Check_Closed_Won.Account.Name} for ${!Check_Closed_Won.Amount}. Congratulations @{!Check_Closed_Won.OwnerId}!</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>SubjectNameOrId</name>
+            <value>
+                <elementReference>{!Check_Closed_Won.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <operationType>PostToChatter</operationType>
+    </nodes>
+    <nodes>
+        <name>Create_Celebration_Task</name>
+        <label>Create Celebration Follow-Up Task</label>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Schedule celebration for {!Check_Closed_Won.Name}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Status</name>
+            <value>
+                <elementReference>Not Started</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Priority</name>
+            <value>
+                <elementReference>Normal</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>ActivityDate</name>
+            <value>
+                <elementReference>{!$Flow.CurrentDate + 7}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>WhatId</name>
+            <value>
+                <elementReference>{!Check_Closed_Won.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>OwnerId</name>
+            <value>
+                <elementReference>{!Check_Closed_Won.OwnerId}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Celebrate the closed deal and schedule kickoff meeting.</elementReference>
+            </value>
+        </inputParameters>
+        <object>Task</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+</Flow>

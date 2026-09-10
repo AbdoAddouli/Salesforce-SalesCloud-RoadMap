@@ -1,0 +1,93 @@
+// ============================================
+// SOQL Practice Queries - Phase 10: Advanced & Integrations
+// ============================================
+
+// 1. Integration health summary
+SELECT System_Name__c, Status__c, COUNT(Id) logCount
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_24_HOURS
+GROUP BY System_Name__c, Status__c
+ORDER BY System_Name__c, Status__c
+
+// 2. Failed integrations by system
+SELECT System_Name__c, Integration_Type__c, Error_Message__c,
+       CreatedDate, Retry_Count__c
+FROM Integration_Log__c
+WHERE Status__c = 'Failed'
+AND CreatedDate = LAST_7_DAYS
+ORDER BY CreatedDate DESC
+
+// 3. Integration volume by hour
+SELECT CALENDAR_HOUR(CreatedDate) hour, COUNT(Id) logCount,
+       SUM(CASE WHEN Status__c = 'Success' THEN 1 ELSE 0 END) successCount
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_24_HOURS
+GROUP BY CALENDAR_HOUR(CreatedDate)
+ORDER BY hour
+
+// 4. Average response time by system
+SELECT System_Name__c, AVG(Response_Code__c) avgCode,
+       COUNT(Id) totalCalls,
+       SUM(CASE WHEN Status__c = 'Success' THEN 1 ELSE 0 END) successCount
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_7_DAYS
+GROUP BY System_Name__c
+
+// 5. Retry analysis
+SELECT System_Name__c, Retry_Count__c, COUNT(Id) logCount
+FROM Integration_Log__c
+WHERE Retry_Count__c > 0
+GROUP BY System_Name__c, Retry_Count__c
+ORDER BY Retry_Count__c DESC
+
+// 6. Integration by direction
+SELECT Direction__c, Integration_Type__c, COUNT(Id) logCount,
+       SUM(CASE WHEN Status__c = 'Success' THEN 1 ELSE 0 END) successCount
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_7_DAYS
+GROUP BY Direction__c, Integration_Type__c
+
+// 7. Opportunities pending sync
+SELECT Id, Name, Amount, StageName, LastModifiedDate
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+AND LastModifiedDate = LAST_7_DAYS
+ORDER BY LastModifiedDate DESC
+
+// 8. Accounts with sync issues
+SELECT Name, LastModifiedDate, SystemModstamp
+FROM Account
+WHERE SystemModstamp > LastModifiedDate
+ORDER BY SystemModstamp DESC
+
+// 9. Integration error trends
+SELECT CALENDAR_DAY(CreatedDate) day, COUNT(Id) errorCount
+FROM Integration_Log__c
+WHERE Status__c = 'Failed'
+AND CreatedDate = LAST_30_DAYS
+GROUP BY CALENDAR_DAY(CreatedDate)
+ORDER BY day
+
+// 10. Top integration consumers
+SELECT System_Name__c, COUNT(Id) totalCalls,
+       AVG(Response_Code__c) avgResponseCode,
+       MIN(CreatedDate) firstCall, MAX(CreatedDate) lastCall
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_30_DAYS
+GROUP BY System_Name__c
+ORDER BY totalCalls DESC
+
+// 11. Platform event monitoring (requires PlatformEventMonitoring)
+SELECT EventType, CreatedDate, CreatedById
+FROM EventStream
+WHERE CreatedDate = LAST_24_HOURS
+AND EventType = 'Publish'
+ORDER BY CreatedDate DESC
+
+// 12. Full integration dashboard query
+SELECT Name, System_Name__c, Integration_Type__c,
+       Direction__c, Status__c, Response_Code__c,
+       Error_Message__c, Retry_Count__c, CreatedDate
+FROM Integration_Log__c
+WHERE CreatedDate = LAST_7_DAYS
+ORDER BY CreatedDate DESC

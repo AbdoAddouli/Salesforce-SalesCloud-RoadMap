@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Auto_Assign_Tasks_New_Opportunity</fullName>
+    <label>Auto Assign Tasks New Opportunity</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Create_Discovery_Task</targetReference>
+        </connector>
+        <object>Opportunity</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <variables>
+        <name>varOppId</name>
+        <dataType>String</dataType>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <nodes>
+        <name>Create_Discovery_Task</name>
+        <label>Create Discovery Call Task</label>
+        <connector>
+            <targetReference>Create_Qualification_Task</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Schedule discovery call for {!$Record.Name}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Status</name>
+            <value>
+                <elementReference>Not Started</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Priority</name>
+            <value>
+                <elementReference>High</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>ActivityDate</name>
+            <value>
+                <elementReference>{!$Flow.CurrentDate + 2}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>WhatId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>OwnerId</name>
+            <value>
+                <elementReference>{!$Record.OwnerId}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Conduct initial discovery call to understand customer needs and requirements.</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Activity_Type__c</name>
+            <value>
+                <elementReference>Discovery Call</elementReference>
+            </value>
+        </inputParameters>
+        <object>Task</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Create_Qualification_Task</name>
+        <label>Create Qualification Task</label>
+        <connector>
+            <targetReference>Post_to_Opportunity_Chatter</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Qualify opportunity {!$Record.Name}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Status</name>
+            <value>
+                <elementReference>Not Started</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Priority</name>
+            <value>
+                <elementReference>Normal</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>ActivityDate</name>
+            <value>
+                <elementReference>{!$Flow.CurrentDate + 5}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>WhatId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>OwnerId</name>
+            <value>
+                <elementReference>{!$Record.OwnerId}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Complete qualification checklist and set initial forecast.</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Activity_Type__c</name>
+            <value>
+                <elementReference>Qualification</elementReference>
+            </value>
+        </inputParameters>
+        <object>Task</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Post_to_Opportunity_Chatter</name>
+        <label>Post to Opportunity Chatter</label>
+        <inputParameters>
+            <name>FeedItemBody</name>
+            <value>
+                <elementReference>New opportunity created! Discovery and qualification tasks have been assigned. Good luck @{!$Record.OwnerId}!</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>SubjectNameOrId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <operationType>PostToChatter</operationType>
+    </nodes>
+</Flow>

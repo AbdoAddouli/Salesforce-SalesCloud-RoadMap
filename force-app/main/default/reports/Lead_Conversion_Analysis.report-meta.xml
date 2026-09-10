@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Lead_Conversion_Analysis</fullName>
+    <label>Lead Conversion Analysis</label>
+    <folder>Sales_Cloud_Reports</folder>
+    <reportFormat>summary</reportFormat>
+    <reportType>Lead</reportType>
+    <columns>
+        <name>Company</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>LeadSource</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Status</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Lead_Score__c</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>Annual_Revenue__c</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <filter>
+        <criteriaItems>
+            <field>IsConverted</field>
+            <operator>equals

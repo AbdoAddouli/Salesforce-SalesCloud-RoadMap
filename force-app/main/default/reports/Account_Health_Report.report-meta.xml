@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account_Health_Report</fullName>
+    <label>Account Health Report</label>
+    <folder>Sales_Cloud_Reports</folder>
+    <reportFormat>summary</reportFormat>
+    <reportType>Account</reportType>
+    <columns>
+        <name>Name</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>Industry</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Total_Revenue_Won__c</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <columns>
+        <name>Pipeline_Value__c</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <columns>
+        <name>Total_Opportunities__c</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <columns>
+        <name>Last_Contact_Date__c</name>
+        <type>detail</type>
+    </columns>
+    <columns>
+        <name>Account_Level__c</name>
+        <type>detail</type>
+    </columns>
+</Report>

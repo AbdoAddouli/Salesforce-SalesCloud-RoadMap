@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Require_Qualification_Date_On_Contact</fullName>
+    <active>true</active>
+    <description>Requires Qualification Date when Lead status is set to Working - Contacted</description>
+    <errorConditionFormula>AND(
+    ISNEW(),
+    ISPICKVAL(Status , &apos;Working - Contacted&apos;),
+    ISBLANK( Qualification_Date__c )
+)</errorConditionFormula>
+    <errorMessage>Qualification Date is required when status is Working - Contacted</errorMessage>
+    <errorDisplayField>Qualification_Date__c</errorDisplayField>
+</ValidationRule>

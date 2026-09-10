@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Prevent_Stage_Skip</fullName>
+    <active>true</active>
+    <description>Prevents skipping opportunity stages - must move forward sequentially</description>
+    <errorConditionFormula>AND(
+    ISCHANGED(StageName),
+    NOT(
+        OR(
+            ISPICKVAL(PriorValue(StageName), &apos;Prospecting&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Qualification&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Prospecting&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Needs Analysis&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Prospecting&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Prospecting&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Lost&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Qualification&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Needs Analysis&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Qualification&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Proposal/Price Quote&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Qualification&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Qualification&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Lost&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Needs Analysis&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Proposal/Price Quote&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Needs Analysis&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Negotiation/Review&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Needs Analysis&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Needs Analysis&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Lost&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Proposal/Price Quote&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Negotiation/Review&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Proposal/Price Quote&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Proposal/Price Quote&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Lost&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Negotiation/Review&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(PriorValue(StageName), &apos;Negotiation/Review&apos;) &amp;&amp; ISPICKVAL(StageName, &apos;Closed Lost&apos;),
+            ISPICKVAL(StageName, &apos;Closed Won&apos;),
+            ISPICKVAL(StageName, &apos;Closed Lost&apos;)
+        )
+    )
+)</errorConditionFormula>
+    <errorMessage>You cannot skip opportunity stages. Please move to the next sequential stage.</errorMessage>
+    <errorDisplayField>StageName</errorDisplayField>
+</ValidationRule>

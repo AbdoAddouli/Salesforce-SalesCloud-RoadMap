@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PlatformEvent xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Integration_Event__e</fullName>
+    <label>Integration Event</label>
+    <pluralLabel>Integration Events</pluralLabel>
+    <description>Platform event for triggering integrations</description>
+    <fields>
+        <fullName>Event_Type__c</fullName>
+        <fieldType>Text</fieldType>
+        <label>Event Type</label>
+        <length>100</length>
+        <required>true</required>
+    </fields>
+    <fields>
+        <fullName>Payload__c</fullName>
+        <fieldType>LongTextArea</fieldType>
+        <label>Payload</label>
+        <length>30000</length>
+        <required>false</required>
+    </fields>
+    <fields>
+        <fullName>Source_System__c</fullName>
+        <fieldType>Text</fieldType>
+        <label>Source System</label>
+        <length>100</length>
+        <required>true</required>
+    </fields>
+    <fields>
+        <fullName>Target_System__c</fullName>
+        <fieldType>Text</fieldType>
+        <label>Target System</label>
+        <length>100</length>
+        <required>false</required>
+    </fields>
+</PlatformEvent>

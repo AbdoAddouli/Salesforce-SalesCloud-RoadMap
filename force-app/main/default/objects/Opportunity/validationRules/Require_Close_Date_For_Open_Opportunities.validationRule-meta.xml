@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Require_Close_Date_For_Open_Opportunities</fullName>
+    <active>true</active>
+    <description>Requires Close Date for all open opportunities</description>
+    <errorConditionFormula>AND(
+    ISBLANK(CloseDate),
+    NOT(ISPICKVAL(StageName, &apos;Closed Won&apos;)),
+    NOT(ISPICKVAL(StageName, &apos;Closed Lost&apos;))
+)</errorConditionFormula>
+    <errorMessage>Close Date is required for open opportunities.</errorMessage>
+    <errorDisplayField>CloseDate</errorDisplayField>
+</ValidationRule>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <deploymentStatus>Deployed</deploymentStatus>
+    <description>Tracks sales quotas for users by quarter</description>
+    <enableActivities>false</enableActivities>
+    <enableBulkApi>true</enableBulkApi>
+    <enableFeeds>false</enableFeeds>
+    <enableHistory>false</enableHistory>
+    <enableReports>true</enableReports>
+    <label>Quota</label>
+    <pluralLabel>Quotas</pluralLabel>
+    <nameField>
+        <label>Quota Name</label>
+        <type>AutoNumber</type>
+        <displayFormat>QUO-{00000}</displayFormat>
+    </nameField>
+    <searchLayouts>
+        <customTabListAdditionalFields>NAME</customTabListAdditionalFields>
+    </searchLayouts>
+</CustomObject>

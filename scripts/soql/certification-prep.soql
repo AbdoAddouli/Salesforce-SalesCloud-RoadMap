@@ -1,0 +1,86 @@
+// ============================================
+// SOQL Practice Queries - Phase 11: Certification Prep
+// ============================================
+
+// 1. Questions by topic and difficulty
+SELECT Topic__c, Difficulty__c, COUNT(Id) questionCount
+FROM Certification_Question__c
+GROUP BY Topic__c, Difficulty__c
+ORDER BY Topic__c, Difficulty__c
+
+// 2. Most common topics
+SELECT Topic__c, COUNT(Id) questionCount
+FROM Certification_Question__c
+GROUP BY Topic__c
+ORDER BY questionCount DESC
+
+// 3. Difficulty distribution
+SELECT Difficulty__c, COUNT(Id) questionCount,
+       AVG(CASE WHEN Correct_Answer__c != NULL THEN 1 ELSE 0 END) withExplanation
+FROM Certification_Question__c
+GROUP BY Difficulty__c
+
+// 4. Study plan progress by user
+SELECT User__r.Name, Certification_Type__c, Status__c, Target_Date__c
+FROM Certification_Study_Plan__c
+ORDER BY Target_Date__c ASC
+
+// 5. Questions without explanations (need to be updated)
+SELECT Id, Question_Text__c, Topic__c, Difficulty__c
+FROM Certification_Question__c
+WHERE Explanation__c = NULL OR Explanation__c = ''
+
+// 6. Certification readiness by topic
+SELECT Topic__c,
+       COUNT(Id) totalQuestions,
+       SUM(CASE WHEN Difficulty__c = 'Easy' THEN 1 ELSE 0 END) easy,
+       SUM(CASE WHEN Difficulty__c = 'Medium' THEN 1 ELSE 0 END) medium,
+       SUM(CASE WHEN Difficulty__c = 'Hard' THEN 1 ELSE 0 END) hard
+FROM Certification_Question__c
+GROUP BY Topic__c
+ORDER BY totalQuestions DESC
+
+// 7. Study plan timeline
+SELECT User__r.Name, Certification_Type__c,
+       Target_Date__c, Status__c,
+       DAY_ONLY(CreatedDate) createdDate
+FROM Certification_Study_Plan__c
+WHERE Target_Date__c >= TODAY
+ORDER BY Target_Date__c ASC
+
+// 8. Questions by certification type relevance
+SELECT Certification_Type__c, COUNT(Id) questionCount
+FROM Certification_Study_Plan__c
+GROUP BY Certification_Type__c
+
+// 9. Full certification dashboard query
+SELECT Name, Topic__c, Difficulty__c,
+       Question_Text__c, Correct_Answer__c,
+       Explanation__c, CreatedDate
+FROM Certification_Question__c
+ORDER BY Topic__c, Difficulty__c
+
+// 10. Practice quiz generation
+SELECT Id, Question_Text__c, Option_A__c, Option_B__c,
+       Option_C__c, Option_D__c, Topic__c, Difficulty__c
+FROM Certification_Question__c
+WHERE Difficulty__c = 'Medium'
+ORDER BY RANDOM()
+LIMIT 10
+
+// 11. Study progress tracking
+SELECT User__r.Name,
+       COUNT(Id) totalPlans,
+       SUM(CASE WHEN Status__c = 'Certified' THEN 1 ELSE 0 END) certified,
+       SUM(CASE WHEN Status__c = 'In Progress' THEN 1 ELSE 0 END) inProgress
+FROM Certification_Study_Plan__c
+GROUP BY User__r.Name
+
+// 12. Certification exam readiness score
+SELECT Topic__c,
+       COUNT(Id) totalQuestions,
+       SUM(CASE WHEN Difficulty__c = 'Easy' THEN 1 ELSE 0 END) * 1 easyScore,
+       SUM(CASE WHEN Difficulty__c = 'Medium' THEN 1 ELSE 0 END) * 2 mediumScore,
+       SUM(CASE WHEN Difficulty__c = 'Hard' THEN 1 ELSE 0 END) * 3 hardScore
+FROM Certification_Question__c
+GROUP BY Topic__c

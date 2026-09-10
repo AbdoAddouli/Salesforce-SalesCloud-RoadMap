@@ -1,0 +1,59 @@
+// ============================================
+// SOQL Practice Queries - Phase 1: Fundamentals
+// ============================================
+// Open these in Developer Console > Query Editor
+// or use: sf data query -q "QUERY_HERE"
+
+// 1. Basic: List all Accounts with key fields
+SELECT Name, Industry, AnnualRevenue, Industry_Segment__c, Health_Score__c
+FROM Account
+LIMIT 10
+
+// 2. Filter by custom field: Accounts in Technology segment
+SELECT Name, Industry, Industry_Segment__c, Customer_Since__c
+FROM Account
+WHERE Industry_Segment__c = 'Technology'
+
+// 3. Contacts with their related Account
+SELECT Name, Email, Phone, Account.Name, Role__c, Engagement_Score__c
+FROM Contact
+WHERE AccountId != NULL
+LIMIT 20
+
+// 4. Leads that are not yet converted
+SELECT Name, Company, Email, Lead_Score__c, Nurture_Status__c, Status
+FROM Lead
+WHERE IsConverted = false
+ORDER BY Lead_Score__c DESC
+
+// 5. Leads sorted by score (top prospects)
+SELECT Name, Company, Lead_Score__c, Qualification_Date__c
+FROM Lead
+WHERE Lead_Score__c > 50
+ORDER BY Lead_Score__c DESC
+
+// 6. Opportunities with Account info
+SELECT Name, Amount, StageName, CloseDate, Account.Name
+FROM Opportunity
+ORDER BY CloseDate ASC
+LIMIT 10
+
+// 7. Aggregate: Count of Leads by Status
+SELECT Status, COUNT(Name) leadCount
+FROM Lead
+GROUP BY Status
+
+// 8. Aggregate: Total pipeline value by Stage
+SELECT StageName, SUM(Amount) totalAmount, COUNT(Name) oppCount
+FROM Opportunity
+GROUP BY StageName
+
+// 9. Cross-object query: Accounts with their Opportunities
+SELECT Name, (SELECT Name, Amount, StageName FROM Opportunities)
+FROM Account
+WHERE Id IN (SELECT AccountId FROM Opportunity)
+
+// 10. Date filter: Leads created this month
+SELECT Name, Company, CreatedDate, Lead_Score__c
+FROM Lead
+WHERE CreatedDate = THIS_MONTH

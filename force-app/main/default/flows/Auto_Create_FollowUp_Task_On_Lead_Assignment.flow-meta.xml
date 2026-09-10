@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Auto_Create_FollowUp_Task_On_Lead_Assignment</fullName>
+    <label>Auto Create Follow-Up Task On Lead Assignment</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Check_Owner_Changed</targetReference>
+        </connector>
+        <object>Lead</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <nodes>
+        <name>Check_Owner_Changed</name>
+        <label>Check if Owner Changed</label>
+        <connector>
+            <targetReference>Create_FollowUp_Task</targetReference>
+        </connector>
+        <filterFormula>ISCHANGED(OwnerId) &amp;&amp; NOT(ISBLANK(OwnerId))</filterFormula>
+        <object>Lead</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>OwnerId</name>
+        </query>
+        <query>
+            <name>FirstName</name>
+        </query>
+        <query>
+            <name>LastName</name>
+        </query>
+        <query>
+            <name>Company</name>
+        </query>
+        <sortOrder>Asc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Create_FollowUp_Task</name>
+        <label>Create Follow-Up Task</label>
+        <connector>
+            <targetReference>Post_To_Chatter</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Follow up with {!Check_Owner_Changed.FirstName} {!Check_Owner_Changed.LastName} at {!Check_Owner_Changed.Company}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Status</name>
+            <value>
+                <elementReference>Not Started</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Priority</name>
+            <value>
+                <elementReference>Normal</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>ActivityDate</name>
+            <value>
+                <elementReference>{!$Flow.CurrentDate}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>WhoId</name>
+            <value>
+                <elementReference>{!Check_Owner_Changed.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>OwnerId</name>
+            <value>
+                <elementReference>{!Check_Owner_Changed.OwnerId}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Auto-created: New lead assigned. Call to introduce ourselves and qualify.</elementReference>
+            </value>
+        </inputParameters>
+        <object>Task</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Post_To_Chatter</name>
+        <label>Notify Team on Chatter</label>
+        <inputParameters>
+            <name>FeedItemBody</name>
+            <value>
+                <elementReference>New lead assigned: {!Check_Owner_Changed.FirstName} {!Check_Owner_Changed.LastName} from {!Check_Owner_Changed.Company}. Welcome call task created.</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>SubjectNameOrId</name>
+            <value>
+                <elementReference>{!Check_Owner_Changed.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <operationType>PostToChatter</operationType>
+    </nodes>
+</Flow>

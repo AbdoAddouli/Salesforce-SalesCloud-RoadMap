@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Meeting_Notes__c</fullName>
+    <externalId>false</externalId>
+    <label>Meeting Notes</label>
+    <length>3000</length>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>TextArea</type>
+    <visibilityPublic</visibilityPublic>
+</CustomField>

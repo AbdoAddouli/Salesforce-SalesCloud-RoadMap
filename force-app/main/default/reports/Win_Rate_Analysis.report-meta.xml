@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Report xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Win_Rate_Analysis</fullName>
+    <label>Win Rate Analysis</label>
+    <folder>Sales_Cloud_Reports</folder>
+    <reportFormat>summary</reportFormat>
+    <reportType>Opportunity</reportType>
+    <columns>
+        <name>Owner</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>StageName</name>
+        <type>summary</type>
+        <function>grouping</function>
+    </columns>
+    <columns>
+        <name>Amount</name>
+        <type>summary</type>
+        <function>sum</function>
+    </columns>
+    <columns>
+        <name>CloseDate</name>
+        <type>detail</type>
+    </columns>
+    <filter>
+        <criteriaItems>
+            <field>CloseDate</field>
+            <operator>equals

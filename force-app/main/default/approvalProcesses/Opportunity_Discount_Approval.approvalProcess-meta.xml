@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApprovalProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opportunity_Discount_Approval</fullName>
+    <active>true</active>
+    <allowRecall>true</allowRecall>
+    <label>Opportunity Discount Approval</label>
+    <showErrorOnFailure>true</showErrorOnFailure>
+    <version>1</version>
+    <approvalPageReferences>
+        <name>standard__approvalpage</name>
+    </approvalPageReferences>
+    <entryCriteria>
+        <booleanFilter>1 AND (2 OR 3)</booleanFilter>
+        <criteriaItems>
+            <field>Amount</field>
+            <operation>greaterOrEqual</operation>
+            <value>50000</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Discount_Percentage__c</field>
+            <operation>greaterThan</operation>
+            <value>10</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Discount_Percentage__c</field>
+            <operation>greaterThan</operation>
+            <value>20</value>
+        </criteriaItems>
+    </entryCriteria>
+    <approvalStep>
+        <name>Step_1_Sales_Manager</name>
+        <label>Sales Manager Approval</label>
+        <approvalStepRequests>
+            <approvalType>staticResource</approvalType>
+            <label>Sales Manager</label>
+            <name>Sales_Manager</name>
+            <replaceAllFields>true</replaceAllFields>
+            <approver>
+                <hierarchy>ManagerOfRecordOwner</hierarchy>
+            </approver>
+        </approvalStepRequests>
+        <approvalStepRequests>
+            <approvalType>staticResource</approvalType>
+            <label>Sales Manager</label>
+            <name>Sales_Manager</name>
+            <replaceAllFields>true</replaceAllFields>
+            <approver>
+                <user>HierarchyToRecordOwner</user>
+            </approver>
+        </approvalStepRequests>
+    </approvalStep>
+    <approvalStep>
+        <name>Step_2_VP_Sales</name>
+        <label>VP Sales Approval</label>
+        <approvalStepRequests>
+            <approvalType>staticResource</approvalType>
+            <label>VP Sales</label>
+            <name>VP_Sales</name>
+            <replaceAllFields>true</replaceAllFields>
+            <approver>
+                <hierarchy>ManagerOfRecordOwner</hierarchy>
+            </approver>
+        </approvalStepRequests>
+        <approvalStepRequests>
+            <approvalType>staticResource</approvalType>
+            <label>VP Sales</label>
+            <name>VP_Sales</name>
+            <replaceAllFields>true</replaceAllFields>
+            <approver>
+                <user>HierarchyToRecordOwner</user>
+            </approver>
+        </approvalStepRequests>
+        <branch>None</branch>
+        <rejectBehavior>
+            <type>RejectRequest</type>
+        </rejectBehavior>
+    </approvalStep>
+    <finalApprovalActions>
+        <name>Mark_Approved</name>
+        <type>FieldUpdate</type>
+        <fieldUpdate>
+            <name>Mark_Approved</name>
+            <field>Approval_Status__c</field>
+            <literalValue>Approved</literalValue>
+            <notifyAssignee>false</notifyAssignee>
+            <operation>Literal</operation>
+            <sendEmail>false</sendEmail>
+        </fieldUpdate>
+    </finalApprovalActions>
+    <finalRejectionActions>
+        <name>Mark_Rejected</name>
+        <type>FieldUpdate</type>
+        <fieldUpdate>
+            <name>Mark_Rejected</name>
+            <field>Approval_Status__c</field>
+            <literalValue>Rejected</literalValue>
+            <notifyAssignee>false</notifyAssignee>
+            <operation>Literal</operation>
+            <sendEmail>false</sendEmail>
+        </fieldUpdate>
+    </finalRejectionActions>
+    <recallActions>
+        <name>Mark_Draft</name>
+        <type>FieldUpdate</type>
+        <fieldUpdate>
+            <name>Mark_Draft</name>
+            <field>Approval_Status__c</field>
+            <literalValue>Draft</literalValue>
+            <notifyAssignee>false</notifyAssignee>
+            <operation>Literal</operation>
+            <sendEmail>false</sendEmail>
+        </fieldUpdate>
+    </recallActions>
+</ApprovalProcess>

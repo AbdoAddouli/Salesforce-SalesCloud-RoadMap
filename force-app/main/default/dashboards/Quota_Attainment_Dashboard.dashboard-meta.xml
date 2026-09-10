@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Dashboard xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Quota_Attainment_Dashboard</fullName>
+    <label>Quota Attainment Dashboard</label>
+    <folder>Sales_Cloud_Dashboards</folder>
+    <runningUserId>005000000000001</runningUserId>
+    <status>draft</status>
+    <components>
+        <components>
+            <chartType>progressBar</chartType>
+            <autorefresh>300</autorefresh>
+            <name>Quota Attainment %</name>
+            <title>Quota Attainment by Rep</title>
+            <componentType>chart</componentType>
+        </components>
+    </components>
+</Dashboard>

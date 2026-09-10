@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Lead_Scoring_Flow</fullName>
+    <label>Lead Scoring Flow</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Calculate_Score</targetReference>
+        </connector>
+        <object>Lead</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <variables>
+        <name>varScore</name>
+        <dataType>Number</dataType>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <value>0</value>
+    </variables>
+    <nodes>
+        <name>Calculate_Score</name>
+        <label>Calculate Lead Score</label>
+        <connector>
+            <targetReference>Check_Industry</targetReference>
+        </connector>
+        <filterFormula>ISCHANGED(Lead_Score__c) || ISNEW()</filterFormula>
+        <object>Lead</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>Industry</name>
+        </query>
+        <query>
+            <name>AnnualRevenue</name>
+        </query>
+        <query>
+            <name>LeadSource</name>
+        </query>
+        <query>
+            <name>Email</name>
+        </query>
+        <query>
+            <name>Phone</name>
+        </query>
+        <query>
+            <name>NumberOfEmployees</name>
+        </query>
+        <query>
+            <name>Lead_Score__c</name>
+        </query>
+        <sortOrder>Asc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Check_Industry</name>
+        <label>Check Industry</label>
+        <connector>
+            <targetReference>Assign_Tech_Score</targetReference>
+            <targetField>Technology</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Check_Revenue</targetReference>
+        </defaultConnector>
+        <label>Check Industry</label>
+        <rules>
+            <name>Is_Technology</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.Industry}</leftValue>
+                <operator>Equals</operator>
+                <rightValue>Technology</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Assign_Tech_Score</name>
+        <label>Add 20 Points for Technology</label>
+        <connector>
+            <targetReference>Check_Revenue</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Lead_Score__c</name>
+            <value>
+                <elementReference>{!Calculate_Score.Lead_Score__c + 20}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Check_Revenue</name>
+        <label>Check Annual Revenue</label>
+        <connector>
+            <targetReference>Add_Revenue_Score</targetReference>
+            <targetField>High_Revenue</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Check_Source</targetReference>
+        </defaultConnector>
+        <label>Check Annual Revenue</label>
+        <rules>
+            <name>High_Revenue</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.AnnualRevenue}</leftValue>
+                <operator>GreaterThanOrEqual</operator>
+                <rightValue>1000000</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Add_Revenue_Score</name>
+        <label>Add 25 Points for High Revenue</label>
+        <connector>
+            <targetReference>Check_Source</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Lead_Score__c</name>
+            <value>
+                <elementReference>{!Calculate_Score.Lead_Score__c + 25}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Check_Source</name>
+        <label>Check Lead Source</label>
+        <connector>
+            <targetReference>Add_Referral_Score</targetReference>
+            <targetField>Referral</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Check_Contact_Info</targetReference>
+        </defaultConnector>
+        <label>Check Lead Source</label>
+        <rules>
+            <name>Is_Referral</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.LeadSource}</leftValue>
+                <operator>Equals</operator>
+                <rightValue>Referral</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Add_Referral_Score</name>
+        <label>Add 15 Points for Referral</label>
+        <connector>
+            <targetReference>Check_Contact_Info</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Lead_Score__c</name>
+            <value>
+                <elementReference>{!Calculate_Score.Lead_Score__c + 15}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Check_Contact_Info</name>
+        <label>Check Contact Info Completeness</label>
+        <connector>
+            <targetReference>Add_Contact_Score</targetReference>
+            <targetField>Has_Contact_Info</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Check_Employees</targetReference>
+        </defaultConnector>
+        <label>Check Contact Info</label>
+        <rules>
+            <name>Has_Contact_Info</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.Email}</leftValue>
+                <operator>IsNull</operator>
+                <rightValue>False</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Add_Contact_Score</name>
+        <label>Add 10 Points for Contact Info</label>
+        <connector>
+            <targetReference>Check_Employees</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Lead_Score__c</name>
+            <value>
+                <elementReference>{!Calculate_Score.Lead_Score__c + 10}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Check_Employees</name>
+        <label>Check Employee Count</label>
+        <connector>
+            <targetReference>Add_Employee_Score</targetReference>
+            <targetField>Large_Company</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Final_Score_Check</targetReference>
+        </defaultConnector>
+        <label>Check Employee Count</label>
+        <rules>
+            <name>Large_Company</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.NumberOfEmployees}</leftValue>
+                <operator>GreaterThanOrEqual</operator>
+                <rightValue>100</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Add_Employee_Score</name>
+        <label>Add 20 Points for Large Company</label>
+        <connector>
+            <targetReference>Final_Score_Check</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Lead_Score__c</name>
+            <value>
+                <elementReference>{!Calculate_Score.Lead_Score__c + 20}</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Final_Score_Check</name>
+        <label>Final Score Check</label>
+        <connector>
+            <targetReference>Set_High_Priority</targetReference>
+            <targetField>High_Score</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>End</targetReference>
+        </defaultConnector>
+        <label>Final Score Check</label>
+        <rules>
+            <name>High_Score</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Calculate_Score.Lead_Score__c}</leftValue>
+                <operator>GreaterThanOrEqual</operator>
+                <rightValue>70</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Set_High_Priority</name>
+        <label>Set High Priority Rating</label>
+        <inputParameters>
+            <name>Rating</name>
+            <value>
+                <elementReference>Hot</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>End</name>
+        <label>End</label>
+    </nodes>
+</Flow>

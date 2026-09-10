@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Dashboard xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Sales_Performance_Dashboard</fullName>
+    <label>Sales Performance Dashboard</label>
+    <folder>Sales_Cloud_Dashboards</folder>
+    <runningUserId>005000000000001</runningUserId>
+    <status>draft</status>
+    <components>
+        <components>
+            <chartType>bar</chartType>
+            <autorefresh>300</autorefresh>
+            <groupingColumn>Forecast_Category__c</groupingColumn>
+            <name>Opportunities by Forecast Category</name>
+            <title>Opportunities by Forecast Category</title>
+            <componentType>chart</componentType>
+            <filter>StageName NOT IN ('Closed Lost') AND CloseDate = THIS_QUARTER</filter>
+        </components>
+    </components>
+</Dashboard>

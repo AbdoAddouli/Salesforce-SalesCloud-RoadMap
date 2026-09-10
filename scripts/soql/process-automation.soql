@@ -1,0 +1,81 @@
+// ============================================
+// SOQL Practice Queries - Phase 7: Processes & Automation
+// ============================================
+
+// 1. Opportunities pending approval
+SELECT Name, Amount, Discount_Percentage__c, Approval_Status__c,
+       Owner.Name, CreatedDate
+FROM Opportunity
+WHERE Approval_Status__c = 'Pending'
+ORDER BY Amount DESC
+
+// 2. Approval history
+SELECT TargetObjectId, Status, CreatedDate,
+       (SELECT ActorId, StepStatus, Comments, CreatedDate
+        FROM Steps
+        ORDER BY CreatedDate DESC)
+FROM ProcessInstance
+WHERE TargetObjectId IN (SELECT Id FROM Opportunity)
+ORDER BY CreatedDate DESC
+
+// 3. Opportunities auto-closed
+SELECT Name, Amount, StageName, Description, LastActivityDate
+FROM Opportunity
+WHERE Description LIKE '%Auto-closed%'
+ORDER BY LastActivityDate DESC
+
+// 4. Opportunities with tasks assigned
+SELECT Name, Amount, StageName,
+       (SELECT Subject, Status, ActivityDate, Activity_Type__c
+        FROM Tasks
+        ORDER BY ActivityDate ASC)
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+ORDER BY Amount DESC
+
+// 5. Task completion rate by type
+SELECT Activity_Type__c,
+       COUNT(Id) totalTasks,
+       SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) completed,
+       ROUND(SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) * 100.0 / COUNT(Id), 1) completionRate
+FROM Task
+WHERE Activity_Type__c != NULL
+GROUP BY Activity_Type__c
+ORDER BY completionRate DESC
+
+// 6. Approval turnaround time
+SELECT TargetObjectId,
+       MIN(CreatedDate) submitted,
+       MAX(CreatedDate) lastAction,
+       AVG(DAY8(MAX(CreatedDate)) - DAY8(MIN(CreatedDate))) avgDaysToApprove
+FROM ProcessInstanceStep
+GROUP BY TargetObjectId
+
+// 7. Opportunities by approval status
+SELECT Approval_Status__c, COUNT(Name) oppCount, SUM(Amount) totalValue
+FROM Opportunity
+GROUP BY Approval_Status__c
+ORDER BY totalValue DESC
+
+// 8. Stale opportunities at risk
+SELECT Name, Amount, StageName, LastActivityDate,
+       DAY8(TODAY()) - DAY8(LastActivityDate) daysSinceActivity
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+AND LastActivityDate < LAST_30_DAYS
+ORDER BY daysSinceActivity DESC
+
+// 9. Flow execution errors (if available)
+SELECT FlowExecutionError__c, CreatedDate, UserId.Name
+FROM FlowExecutionError
+WHERE CreatedDate = TODAY
+ORDER BY CreatedDate DESC
+
+// 10. Full automation dashboard query
+SELECT Name, Amount, StageName, Approval_Status__c,
+       Discount_Percentage__c, LastActivityDate,
+       Owner.Name, CreatedDate, CloseDate,
+       (SELECT Subject, Status FROM Tasks ORDER BY ActivityDate DESC)
+FROM Opportunity
+WHERE StageName NOT IN ('Closed Won', 'Closed Lost')
+ORDER BY Amount DESC

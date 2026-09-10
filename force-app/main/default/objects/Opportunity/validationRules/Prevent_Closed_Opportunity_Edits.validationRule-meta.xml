@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Prevent_Closed_Opportunity_Edits</fullName>
+    <active>true</active>
+    <description>Prevents editing key fields on closed opportunities</description>
+    <errorConditionFormula>AND(
+    OR(ISCHANGED(Amount), ISCHANGED(StageName), ISCHANGED(CloseDate)),
+    OR(ISPICKVAL(PriorValue(StageName), &apos;Closed Won&apos;), ISPICKVAL(PriorValue(StageName), &apos;Closed Lost&apos;))
+)</errorConditionFormula>
+    <errorMessage>Closed opportunities cannot be edited. Reopen the opportunity first.</errorMessage>
+    <errorDisplayField>Amount</errorDisplayField>
+</ValidationRule>

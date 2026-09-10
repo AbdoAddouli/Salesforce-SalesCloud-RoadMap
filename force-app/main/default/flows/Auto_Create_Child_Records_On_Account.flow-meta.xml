@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Auto_Create_Child_Records_On_Account</fullName>
+    <label>Auto Create Child Records On Account</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Create_Default_Contact</targetReference>
+        </connector>
+        <object>Account</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <nodes>
+        <name>Create_Default_Contact</name>
+        <label>Create Primary Contact</label>
+        <connector>
+            <targetReference>Create_Welcome_Task</targetReference>
+        </connector>
+        <inputParameters>
+            <name>FirstName</name>
+            <value>
+                <elementReference>Primary</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>LastName</name>
+            <value>
+                <elementReference>{!$Record.Name} - Primary Contact</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>AccountId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Role__c</name>
+            <value>
+                <elementReference>Decision Maker</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Email</name>
+            <value>
+                <elementReference>info@{!$Record.Name.toLowerCase().replace(' ', '')}.com</elementReference>
+            </value>
+        </inputParameters>
+        <object>Contact</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Create_Welcome_Task</name>
+        <label>Create Welcome Call Task</label>
+        <connector>
+            <targetReference>Post_Welcome_Chatter</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Subject</name>
+            <value>
+                <elementReference>Welcome call for {!$Record.Name}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Status</name>
+            <value>
+                <elementReference>Not Started</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Priority</name>
+            <value>
+                <elementReference>Normal</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>ActivityDate</name>
+            <value>
+                <elementReference>{!$Flow.CurrentDate + 3}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>WhatId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>OwnerId</name>
+            <value>
+                <elementReference>{!$Record.OwnerId}</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>Description</name>
+            <value>
+                <elementReference>Welcome new account. Schedule introduction call and assess needs.</elementReference>
+            </value>
+        </inputParameters>
+        <object>Task</object>
+        <operationType>CreateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Post_Welcome_Chatter</name>
+        <label>Post Welcome to Chatter</label>
+        <inputParameters>
+            <name>FeedItemBody</name>
+            <value>
+                <elementReference>New account created: {!$Record.Name}. Welcome task assigned to the account owner.</elementReference>
+            </value>
+        </inputParameters>
+        <inputParameters>
+            <name>SubjectNameOrId</name>
+            <value>
+                <elementReference>{!$Record.Id}</elementReference>
+            </value>
+        </inputParameters>
+        <operationType>PostToChatter</operationType>
+    </nodes>
+</Flow>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>68.0</apiVersion>
+    <fullName>Auto_Update_Nurture_Status</fullName>
+    <label>Auto Update Nurture Status</label>
+    <processType>Flow</processType>
+    <start>
+        <connector>
+            <targetReference>Check_Lead_Score</targetReference>
+        </connector>
+        <object>Lead</object>
+        <recordTriggerType>AfterSave</recordTriggerType>
+        <triggerType>RecordAfterSave</triggerType>
+    </start>
+    <status>Active</status>
+    <type>Workflow</type>
+    <variables>
+        <name>varLeadScore</name>
+        <dataType>Number</dataType>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <nodes>
+        <name>Check_Lead_Score</name>
+        <label>Check Lead Score</label>
+        <connector>
+            <targetReference>Decision_Nurture_Status</targetReference>
+        </connector>
+        <filterFormula>Lead_Score__c &gt; 50</filterFormula>
+        <object>Lead</object>
+        <operationType>GetRecords</operationType>
+        <query>
+            <name>Id</name>
+        </query>
+        <query>
+            <name>Lead_Score__c</name>
+        </query>
+        <query>
+            <name>Status</name>
+        </query>
+        <query>
+            <name>Nurture_Status__c</name>
+        </query>
+        <sortOrder>Asc</sortOrder>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Decision_Nurture_Status</name>
+        <label>Decision Nurture Status</label>
+        <connector>
+            <targetReference>Update_Nurture_Active</targetReference>
+            <targetField>Default</targetField>
+        </connector>
+        <defaultConnector>
+            <targetReference>Update_Nurture_Active</targetReference>
+        </defaultConnector>
+        <label>Decision Nurture Status</label>
+        <rules>
+            <name>High_Score_Active</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValue>{!Check_Lead_Score.Lead_Score__c}</leftValue>
+                <operator>GreaterThan</operator>
+                <rightValue>50</rightValue>
+            </conditions>
+        </rules>
+    </nodes>
+    <nodes>
+        <name>Update_Nurture_Active</name>
+        <label>Set Nurture Status to Active</label>
+        <connector>
+            <targetReference>Update_Nurture_Dormant</targetReference>
+        </connector>
+        <inputParameters>
+            <name>Nurture_Status__c</name>
+            <value>
+                <elementReference>Active Nurture</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+    <nodes>
+        <name>Update_Nurture_Dormant</name>
+        <label>Set Nurture Status to Dormant</label>
+        <inputParameters>
+            <name>Nurture_Status__c</name>
+            <value>
+                <elementReference>Dormant</elementReference>
+            </value>
+        </inputParameters>
+        <object>Lead</object>
+        <operationType>UpdateRecords</operationType>
+        <storeInputAutomatically>true</storeInputAutomatically>
+    </nodes>
+</Flow>

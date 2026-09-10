@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AssignmentRules xmlns="http://soap.sforce.com/2006/04/metadata">
+    <assignmentRules>
+        <fullName>Lead Assignment Rules</fullName>
+        <label>Lead Assignment Rules</label>
+        <rule>
+            <fullName>Enterprise Leads</fullName>
+            <active>true</active>
+            <booleanFilter>1 AND (2 OR 3)</booleanFilter>
+            <label>Enterprise Leads</label>
+            <ruleEntry>
+                <fullName>Enterprise High Revenue</fullName>
+                <ascendingOrDescending>Asc</ascendingOrDescending>
+                <booleanFilter>1 AND 2</booleanFilter>
+                <criteriaItems>
+                    <field>AnnualRevenue</field>
+                    <operation>greaterOrEqual</operation>
+                    <value>1000000</value>
+                </criteriaItems>
+                <criteriaItems>
+                    <field>Industry</field>
+                    <operation>equals</field>
+                    <value>Technology</value>
+                </criteriaItems>
+                <criteriaItems>
+                    <field>Industry</field>
+                    <operation>equals</field>
+                    <value>Finance</value>
+                </criteriaItems>
+                <enabled>true</enabled>
+                <preferBlankOrNotFound>false</preferBlankOrNotFound>
+                <assignedTo>Enterprise Sales Queue</assignedTo>
+                <assignedToType>Queue</assignedToType>
+            </ruleEntry>
+            <ruleEntry>
+                <fullName>Technology Leads</fullName>
+                <ascendingOrDescending>Asc</ascendingOrDescending>
+                <criteriaItems>
+                    <field>Industry</field>
+                    <operation>equals</field>
+                    <value>Technology</value>
+                </criteriaItems>
+                <enabled>true</enabled>
+                <preferBlankOrNotFound>false</preferBlankOrNotFound>
+                <assignedTo>Tech Sales Queue</assignedTo>
+                <assignedToType>Queue</assignedToType>
+            </ruleEntry>
+            <ruleEntry>
+                <fullName>Healthcare Leads</fullName>
+                <ascendingOrDescending>Asc</ascendingOrDescending>
+                <criteriaItems>
+                    <field>Industry</field>
+                    <operation>equals</field>
+                    <value>Healthcare</value>
+                </criteriaItems>
+                <enabled>true</enabled>
+                <preferBlankOrNotFound>false</preferBlankOrNotFound>
+                <assignedTo>Healthcare Sales Queue</assignedTo>
+                <assignedToType>Queue</assignedToType>
+            </ruleEntry>
+            <ruleEntry>
+                <fullName>West Coast Leads</fullName>
+                <ascendingOrDescending>Asc</ascendingOrDescending>
+                <booleanFilter>1 OR 2 OR 3</booleanFilter>
+                <criteriaItems>
+                    <field>State</field>
+                    <operation>equals</field>
+                    <value>CA</value>
+                </criteriaItems>
+                <criteriaItems>
+                    <field>State</field>
+                    <operation>equals</field>
+                    <value>WA</value>
+                </criteriaItems>
+                <criteriaItems>
+                    <field>State</field>
+                    <operation>equals</field>
+                    <value>OR</value>
+                </criteriaItems>
+                <enabled>true</enabled>
+                <preferBlankOrNotFound>false</preferBlankOrNotFound>
+                <assignedTo>West Coast Team</assignedTo>
+                <assignedToType>Queue</assignedToType>
+            </ruleEntry>
+            <ruleEntry>
+                <fullName>Default - Sales General</fullName>
+                <ascendingOrDescending>Asc</ascendingOrDescending>
+                <enabled>true</enabled>
+                <preferBlankOrNotFound>false</preferBlankOrNotFound>
+                <assignedTo>Sales General Queue</assignedTo>
+                <assignedToType>Queue</assignedToType>
+            </ruleEntry>
+        </rule>
+    </assignmentRules>
+</AssignmentRules>

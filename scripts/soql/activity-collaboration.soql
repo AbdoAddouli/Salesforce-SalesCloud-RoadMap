@@ -1,0 +1,87 @@
+// ============================================
+// SOQL Practice Queries - Phase 6: Sales Collaboration
+// ============================================
+
+// 1. Open tasks by priority
+SELECT Subject, Priority, ActivityDate, Owner.Name, What.Name, Who.Name
+FROM Task
+WHERE Status != 'Completed'
+ORDER BY ActivityDate ASC
+
+// 2. Activities completed this week
+SELECT Subject, Status, ActivityDate, CompletedDateTime, Activity_Type__c, Outcome__c
+FROM Task
+WHERE Status = 'Completed'
+AND ActivityDate = THIS_WEEK
+ORDER BY CompletedDateTime DESC
+
+// 3. Activity count by rep
+SELECT Owner.Name,
+       COUNT(Id) totalTasks,
+       SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) completed,
+       SUM(CASE WHEN Status != 'Completed' THEN 1 ELSE 0 END) open
+FROM Task
+WHERE ActivityDate = THIS_MONTH
+GROUP BY Owner.Name
+ORDER BY totalTasks DESC
+
+// 4. Overdue tasks with details
+SELECT Subject, ActivityDate, Owner.Name, What.Name, Who.Name,
+       Priority, Activity_Type__c
+FROM Task
+WHERE Status != 'Completed'
+AND ActivityDate < TODAY
+ORDER BY ActivityDate ASC
+
+// 5. Meeting events this week
+SELECT Subject, StartDateTime, EndDateTime, DurationInMinutes,
+       Meeting_Type__c, Attendee_Count__c, Location
+FROM Event
+WHERE ActivityDate = THIS_WEEK
+ORDER BY StartDateTime ASC
+
+// 6. Activity type breakdown
+SELECT Activity_Type__c,
+       COUNT(Id) taskCount,
+       SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) completed
+FROM Task
+WHERE Activity_Type__c != NULL
+GROUP BY Activity_Type__c
+ORDER BY taskCount DESC
+
+// 7. Tasks with call duration
+SELECT Subject, Call_Duration_Minutes__c, Activity_Type__c, Outcome__c,
+       Who.Name, What.Name
+FROM Task
+WHERE Call_Duration_Minutes__c != NULL
+AND Status = 'Completed'
+ORDER BY Call_Duration_Minutes__c DESC
+
+// 8. Activities per opportunity
+SELECT What.Name opportunityName,
+       COUNT(Id) activityCount,
+       MAX(ActivityDate) lastActivity
+FROM Task
+WHERE WhatId IN (SELECT Id FROM Opportunity)
+GROUP BY What.Name
+ORDER BY activityCount DESC
+LIMIT 10
+
+// 9. Chatter posts on opportunities
+SELECT Parent.Name, Body, CreatedDate, CreatedBy.Name
+FROM FeedItem
+WHERE ParentId IN (SELECT Id FROM Opportunity)
+ORDER BY CreatedDate DESC
+LIMIT 20
+
+// 10. Full activity dashboard query
+SELECT Owner.Name,
+       COUNT(Id) totalActivities,
+       SUM(CASE WHEN Status = 'Completed' THEN 1 ELSE 0 END) completed,
+       SUM(CASE WHEN Status != 'Completed' THEN 1 ELSE 0 END) pending,
+       SUM(CASE WHEN ActivityDate < TODAY AND Status != 'Completed' THEN 1 ELSE 0 END) overdue,
+       AVG(Call_Duration_Minutes__c) avgCallDuration
+FROM Task
+WHERE ActivityDate = THIS_MONTH
+GROUP BY Owner.Name
+ORDER BY totalActivities DESC
