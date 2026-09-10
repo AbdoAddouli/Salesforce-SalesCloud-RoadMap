@@ -3,44 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sales Cloud RoadMap — Interactive Architecture</title>
+  <title>Sales Cloud Academy — Learn Salesforce Sales Cloud</title>
+  <meta name="description" content="Interactive, self-paced course: 11 modules, 47 lessons and quizzes to master Salesforce Sales Cloud and get cert-ready." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁️</text></svg>" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
 <body>
 
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">☁️</div>
-      <div>Sales Cloud RoadMap<span>Interactive Architecture</span></div>
+  <div class="shell">
+
+    <aside class="sidebar">
+      <!-- filled by app.js -->
+    </aside>
+
+    <div class="content">
+
+      <header class="topbar">
+        <button class="menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+        <a class="brand" href="#/">
+          <span class="logo">☁️</span>
+          <span class="brand-text"><b>Sales Cloud</b><small>Academy</small></span>
+        </a>
+        <div class="tb-search">
+          <input id="topSearch" type="search" placeholder="Search lessons, concepts…  (press /)" autocomplete="off" />
+          <span class="kbd">/</span>
+        </div>
+        <div class="tb-meter" title="Roadmap progress">
+          <div class="tb-bar"><i id="topBar"></i></div>
+          <span id="topPct" class="tb-pct">0%</span>
+        </div>
+      </header>
+
+      <main id="view"></main>
+
+      <footer class="footer">
+        <a href="https://github.com/AbdoAddouli/Salesforce-SalesCloud-RoadMap" target="_blank" rel="noopener">AbdoAddouli/Salesforce-SalesCloud-RoadMap</a>
+        <span>·</span>
+        <span>Salesforce Sales Cloud learning academy — API 68.0</span>
+        <span>·</span>
+        <span>Progress is saved in your browser</span>
+      </footer>
+
     </div>
-    <nav class="tabs" aria-label="Views">
-      <button class="tab active" data-tab="overview">Layers</button>
-      <button class="tab" data-tab="data">Data Model</button>
-      <button class="tab" data-tab="wire">Wiring</button>
-      <button class="tab" data-tab="flow">Sales Flow</button>
-      <button class="tab" data-tab="integ">Integrations</button>
-      <button class="tab" data-tab="phases">Phases</button>
-    </nav>
-    <div class="search">
-      <input id="q" type="search" placeholder="Search components…  ( / to focus, Enter to jump)" autocomplete="off" />
-      <span class="kbd">/</span>
-      <span id="searchCount"></span>
-    </div>
-  </header>
+  </div>
 
-  <main id="view"></main>
+  <div id="toast" role="status" aria-live="polite"></div>
 
-  <footer>
-    <a href="https://github.com/AbdoAddouli/Salesforce-SalesCloud-RoadMap" target="_blank" rel="noopener">AbdoAddouli/Salesforce-SalesCloud-RoadMap</a>
-    · Salesforce Sales Cloud learning roadmap · API 68.0
-  </footer>
-
-  <div class="overlay" id="overlay"></div>
-  <aside class="drawer" id="drawer">
-    <div id="drawerBody"></div>
-  </aside>
-
+  <script src="assets/curriculum.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

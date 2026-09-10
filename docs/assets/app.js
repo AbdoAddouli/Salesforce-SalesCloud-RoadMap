@@ -1,589 +1,734 @@
 /* =============================================================================
- * Sales Cloud RoadMap — Interactive Architecture UI
- * Renders layered overview, data model, trigger→service wiring, sales flow,
- * integrations, and the phase map. Everything is generated client-side from
- * the DATA registry below, so the UI always describes the real repo.
+ * Sales Cloud Academy — app
+ * Client-side learning app: hash routing, lesson renderer, quiz engine,
+ * progress persistence (localStorage), search, keyboard shortcuts.
  * ============================================================================= */
 
-/* -------------------------------------------------------------------------
- * DATA — single source of truth for every interactive component.
- * ------------------------------------------------------------------------- */
+/* ------------------------- small helpers ------------------------- */
 
-const PHASES = [
-  { n: 1, t: 'Fundamentals', topic: 'Platform, data model, security', guide: '01-fundamentals.md', art: ['PermSet Sales_Cloud_User', 'Custom fields (Account/Contact/Lead/Opportunity)', 'SalesCloudFundamentalsTest'] },
-  { n: 2, t: 'Lead Management', topic: 'Capture, scoring, assignment, conversion', guide: '02-lead-management.md', art: ['LeadTrigger', 'LeadScoringService', 'Assignment Rules', 'Lead_Scoring_Flow / Nurture flows'] },
-  { n: 3, t: 'Accounts & Contacts', topic: 'Hierarchy, roll-ups, teams, health score', guide: '03-accounts-contacts.md', art: ['AccountService', 'AccountTrigger', 'OpportunityTrigger', 'Auto_Create_Child_Records_On_Account'] },
-  { n: 4, t: 'Opportunity Management', topic: 'Stages, pipeline, products, quotes', guide: '04-opportunity-management.md', art: ['OpportunityService', 'OpportunityStageTrigger', 'Validation Rules', 'Auto_Assign_Tasks_New_Opportunity'] },
-  { n: 5, t: 'Campaigns & Marketing', topic: 'Campaign influence model, ROI', guide: '05-campaigns.md', art: ['CampaignService', 'OpportunityCampaignTrigger', 'CampaignMemberStatusTrigger', 'Opportunity.Campaign fields'] },
-  { n: 6, t: 'Collaboration', topic: 'Activities, follow-ups, Chatter, email', guide: '06-collaboration.md', art: ['ActivityService', 'TaskActivityTrigger', 'Deal_Close_Chatter_Notification'] },
-  { n: 7, t: 'Processes & Automation', topic: 'Approvals, Flows, best practices', guide: '07-processes-automation.md', art: ['ProcessAutomationService', 'Approval Process', 'Auto_Close_Stale_Opportunities', 'Weekly_Pipeline_Summary_Email'] },
-  { n: 8, t: 'Forecasting & Territories', topic: 'Forecast hierarchy, territory model', guide: '08-forecasting-territories.md', art: ['ForecastingService', 'OpportunityForecastTrigger', 'Quota__c', 'Territory__c'] },
-  { n: 9, t: 'Reporting & Dashboards', topic: 'Report types, dashboards, KPIs', guide: '09-reporting.md', art: ['ReportingService', '7 Reports', '4 Dashboards'] },
-  { n: 10, t: 'Advanced & Integrations', topic: 'API, platform events, metadata', guide: '10-advanced.md', art: ['IntegrationService', 'Integration_Log__c', 'Integration_Event__e', 'API_Configuration__mdt'] },
-  { n: 11, t: 'Certification Prep', topic: 'Admin & Sales Cloud Consultant exam', guide: '11-certification-prep.md', art: ['CertificationPrepService', 'Certification_Question__c', 'Certification_Study_Plan__c'] },
-];
+const $  = (s, c) => (c || document).querySelector(s);
+const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
 
-const TRIGGERS = [
-  { id: 'leadTrigger', name: 'LeadTrigger', events: 'before/after insert · after update', svc: 'leadScoring' },
-  { id: 'accountTrigger', name: 'AccountTrigger', events: 'after insert', svc: 'accountService' },
-  { id: 'opportunityTrigger', name: 'OpportunityTrigger', events: 'after insert/update', svc: 'accountService' },
-  { id: 'opportunityStageTrigger', name: 'OpportunityStageTrigger', events: 'before insert/update', svc: 'opportunityService' },
-  { id: 'opportunityCampaignTrigger', name: 'OpportunityCampaignTrigger', events: 'after insert/update', svc: 'campaignService' },
-  { id: 'campaignMemberStatusTrigger', name: 'CampaignMemberStatusTrigger', events: 'after insert', svc: 'campaignService' },
-  { id: 'taskActivityTrigger', name: 'TaskActivityTrigger', events: 'after insert/update', svc: 'activityService' },
-  { id: 'opportunityForecastTrigger', name: 'OpportunityForecastTrigger', events: 'before insert/update', svc: 'forecastingService' },
-];
+const esc = (s = '') => s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+const cyrb53 = s => { let h = 9; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 2654435761); return (h ^ h >>> 9) >>> 0; };
 
-const SERVICES = [
-  { id: 'leadScoring', name: 'LeadScoringService', duty: 'Scoring, ratings, nurture status' },
-  { id: 'accountService', name: 'AccountService', duty: 'Hierarchy, roll-ups, health score' },
-  { id: 'opportunityService', name: 'OpportunityService', duty: 'Close dates, stale-close, analytics' },
-  { id: 'campaignService', name: 'CampaignService', duty: 'Members, metrics, ROI' },
-  { id: 'activityService', name: 'ActivityService', duty: 'Follow-ups, activity metrics' },
-  { id: 'processAutomation', name: 'ProcessAutomationService', duty: 'Approvals, emails, automation' },
-  { id: 'forecastingService', name: 'ForecastingService', duty: 'Forecast, quotas, territories' },
-  { id: 'reportingService', name: 'ReportingService', duty: 'KPIs behind dashboards' },
-  { id: 'integrationService', name: 'IntegrationService', duty: 'Logging, retries, webhooks' },
-  { id: 'certificationPrep', name: 'CertificationPrepService', duty: 'Question bank, quiz, study plans' },
-];
+const MODULES = ACADEMY;
 
-const FLOWS = [
-  { id: 'flowScoring', name: 'Lead_Scoring_Flow', phase: 2, kind: 'Screen Flow' },
-  { id: 'flowNurture', name: 'Auto_Update_Nurture_Status', phase: 2, kind: 'Record-Triggered' },
-  { id: 'flowLeadFollowUp', name: 'Auto_Create_FollowUp_Task_On_Lead_Assignment', phase: 2, kind: 'Record-Triggered' },
-  { id: 'flowChildRecords', name: 'Auto_Create_Child_Records_On_Account', phase: 3, kind: 'Record-Triggered' },
-  { id: 'flowAssignTasks', name: 'Auto_Assign_Tasks_New_Opportunity', phase: 4, kind: 'Record-Triggered' },
-  { id: 'flowChatter', name: 'Deal_Close_Chatter_Notification', phase: 6, kind: 'Record-Triggered' },
-  { id: 'flowStale', name: 'Auto_Close_Stale_Opportunities', phase: 7, kind: 'Scheduled' },
-  { id: 'flowEmail', name: 'Weekly_Pipeline_Summary_Email', phase: 7, kind: 'Scheduled' },
-];
+/* ------------------------- progress store ------------------------- */
 
-const SURFACE = [
-  { id: 'permSet', name: 'Sales_Cloud_User', type: 'Permission Set', phase: 1, desc: 'Granular field + object access (FLS) for Sales Cloud users.' },
-  { id: 'approval', name: 'Opportunity_Discount_Approval', type: 'Approval Process', phase: 7, desc: 'Human-in-the-loop sign-off when a discount exceeds the threshold.' },
-  { id: 'assignment', name: 'Lead Assignment Rules', type: 'Assignment Rule', phase: 2, desc: 'Routes inbound leads to industry queues (Tech, Enterprise, West Coast...).' },
-  { id: 'validation', name: '6 Validation Rules', type: 'Validation', phase: 4, desc: 'Stage-skip guard, closed-deal lock, amount-for-high-probability, close-date required, lead contact info, qualification date.' },
-];
+const KEY = 'scacademy-v1';
+let store = load();
 
-const OBJECTS = [
-  { group: 'Standard', name: 'Account', icon: '🏢', desc: 'Companies you sell to. Custom fields power hierarchy and health.', fields: ['Industry_Segment__c', 'Health_Score__c', 'Account_Level__c', 'Ultimate_Parent__c', 'Total_Revenue_Won__c', 'Pipeline_Value__c', 'Number_of_Contacts__c', 'Total_Opportunities__c', 'Customer_Since__c', 'Last_Contact_Date__c', 'Last_Won_Opportunity_Date__c'] },
-  { group: 'Standard', name: 'Contact', icon: '👤', desc: 'Individual people at those companies, with roles & engagement.', fields: ['Role__c', 'Engagement_Score__c'] },
-  { group: 'Standard', name: 'Lead', icon: '🎯', desc: 'Unqualified prospects. Scoring + nurture + qualification before conversion.', fields: ['Lead_Score__c', 'Nurture_Status__c', 'Qualification_Date__c'] },
-  { group: 'Standard', name: 'Opportunity', icon: '💼', desc: 'Deals in the pipeline. Stage drives probability, weighted forecast & categories.', fields: ['Discount_Percentage__c', 'Approval_Status__c', 'Territory__c', 'Forecast_Category__c', 'Forecast_Amount__c', 'Weighted_Forecast__c'] },
-  { group: 'Standard', name: 'Campaign', icon: '📣', desc: 'Marketing initiatives. Members, responds and revenue feed ROI.', fields: ['Total_Members__c', 'Responded_Members__c', 'Conversion_Rate__c', 'Total_Revenue_Generated__c', 'ROI__c', 'Cost_Per_Lead__c', 'Budget_Used__c'] },
-  { group: 'Standard', name: 'CampaignMember', icon: '🧲', desc: 'Junction between Campaign and Contact/Lead (many-to-many).', fields: ['Status (Sent / Responded / Converted)'] },
-  { group: 'Standard', name: 'Task', icon: '✅', desc: 'To-dos. WhoId = person, WhatId = record. Auto follow-ups on completion.', fields: ['Activity_Type__c', 'Call_Duration_Minutes__c', 'Outcome__c'] },
-  { group: 'Standard', name: 'Event', icon: '📅', desc: 'Calendar meetings with start/end and attendees.', fields: ['Meeting_Type__c', 'Meeting_Notes__c', 'Attendee_Count__c'] },
-  { group: 'Standard', name: 'User', icon: '🪪', desc: 'The reps & managers. Territory and quota roll up per user.', fields: ['Sales_Territory__c', 'Forecast_Quota__c'] },
-  { group: 'Standard', name: 'Product2 / Pricebook', icon: '📦', desc: 'Catalog + price books + line items (products on an opportunity).', fields: ['OpportunityLineItem: qty × price → Amount'] },
-  { group: 'Custom', name: 'Quota__c', icon: '📊', desc: 'Sales targets: user + amount + quarter period.', fields: ['User__c', 'Amount__c', 'Period_Start__c', 'Period_End__c', 'Attainment__c', 'Actual_Revenue__c'] },
-  { group: 'Custom', name: 'Territory__c', icon: '🗺️', desc: 'Region definitions with a managing rep.', fields: ['Region__c', 'Territory_Manager__c', 'Active__c'] },
-  { group: 'Custom', name: 'Integration_Log__c', icon: '🧾', desc: 'Audit trail for every inbound/outbound API call.', fields: ['System_Name__c', 'Integration_Type__c', 'Direction__c', 'Status__c', 'Request/Response_Body__c', 'Response_Code__c', 'Retry_Count__c', 'Error_Message__c', 'Record_Id__c'] },
-  { group: 'Custom', name: 'Certification_Question__c', icon: '❓', desc: 'Mini question bank for study & quizzing.', fields: ['Question_Text__c', 'Option_A..D__c', 'Correct_Answer__c', 'Explanation__c', 'Topic__c', 'Difficulty__c'] },
-  { group: 'Custom', name: 'Certification_Study_Plan__c', icon: '📚', desc: 'Per-user study plans with target dates and status.', fields: ['User__c', 'Certification_Type__c', 'Target_Date__c', 'Status__c'] },
-  { group: 'Platform', name: 'Integration_Event__e', icon: '⚡', desc: 'Platform event for decoupled, async integration hand-offs.', fields: ['Payload / custom fields'] },
-  { group: 'Platform', name: 'API_Configuration__mdt', icon: '🔧', desc: 'Custom metadata: read-only endpoint config consumed by IntegrationService.', fields: ['Endpoint, Headers, Timeout'] },
-];
-
-const RELS = [
-  { a: 'Account', b: 'Contact', type: '1 — N', note: 'Required parent for child records' },
-  { a: 'Account', b: 'Opportunity', type: '1 — N', note: 'Roll-up metrics onto Account' },
-  { a: 'Contact', b: 'CampaignMember', type: '1 — N', note: 'Join a campaign' },
-  { a: 'Campaign', b: 'CampaignMember', type: '1 — N', note: 'Track member status' },
-  { a: 'Lead', b: 'Account / Contact / Opportunity', type: 'convert', note: 'Lead conversion creates all three' },
-  { a: 'Opportunity', b: 'OpportunityLineItem', type: '1 — N', note: 'Products on a deal' },
-  { a: 'PricebookEntry', b: 'OpportunityLineItem', type: '1 — N', note: 'Pricing line items' },
-  { a: 'Product2', b: 'PricebookEntry', type: '1 — N', note: 'Catalog → price book' },
-  { a: 'WhoId', b: 'Contact / Lead', type: 'N — 1', note: 'Task / Event person' },
-  { a: 'WhatId', b: 'Account / Opportunity', type: 'N — 1', note: 'Task / Event record' },
-  { a: 'User', b: 'Quota__c', type: '1 — N', note: 'User__c lookup' },
-  { a: 'User', b: 'Territory__c', type: '1 — N', note: 'Territory_Manager__c lookup' },
-  { a: 'User', b: 'Certification_Study_Plan__c', type: '1 — N', note: 'Owner of a study plan' },
-  { a: 'Any object', b: 'Integration_Log__c', type: '0..1 — N', note: 'Record_Id__c generic reference' },
-];
-
-const FLOW_STEPS = [
-  { t: 'Lead captured', d: 'Web form creates a Lead; validation demands email or phone.', icon: '🪤' },
-  { t: 'Scoring & rating', d: 'LeadTrigger → LeadScoringService sets score, rating and nurture status.', icon: '🔢' },
-  { t: 'Queue routing', d: 'Assignment rules hand the lead to the right industry queue.', icon: '🎢' },
-  { t: 'Conversion', d: 'Qualified lead becomes Account + Contact + Opportunity.', icon: '🔄' },
-  { t: 'Stage management', d: 'OpportunityStageTrigger sets close dates and opens tasks per stage.', icon: '🎚️' },
-  { t: 'Campaign influence', d: 'Won deals attach account contacts to campaigns (ROI attribution).', icon: '📣' },
-  { t: 'Processes', d: 'Big discounts route through Approval; stale deals auto-close.', icon: '⚙️' },
-  { t: 'Activity & Chatter', d: 'Completed tasks spawn follow-ups and high-value Chatter posts.', icon: '💬' },
-  { t: 'Win / lose', d: 'Stage flips to Closed Won / Closed Lost.', icon: '🏁' },
-  { t: 'Revenue roll-up', d: 'AccountService refreshes revenue + health on the Account.', icon: '🔁' },
-  { t: 'Forecast & quota', d: 'ForecastingService computes weighted forecast & attainment.', icon: '🎯' },
-  { t: 'Reporting', d: 'ReportingService KPIs feed the 4 dashboards and 7 reports.', icon: '📈' },
-];
-
-const INTEG_STEPS = [
-  { t: 'External system', d: 'ERP / webhook / REST client initiates a call.', icon: '🖥️' },
-  { t: 'IntegrationService', d: 'Normalizes the payload; reads API_Configuration__mdt.', icon: '🧩' },
-  { t: 'Success?', d: 'On success → log + notify via platform event.', icon: '✔️' },
-  { t: 'Retry logic', d: 'On failure → retry until Retry_Count__c hits the cap.', icon: '🔁' },
-  { t: 'Max retries', d: 'Past the cap → custom IntegrationException is raised.', icon: '⛔' },
-  { t: 'Audit trail', d: 'Every call lands in Integration_Log__c for ops review.', icon: '🧾' },
-];
-
-/* Artifact detail library — every chip/card maps to one of these. */
-const DETAILS = {};
-[
-  ...TRIGGERS.map(t => ({ id: t.id, title: t.name, type: 'Trigger', phase: TRIGGER_PHASE(t.name), icon: t.id === 'leadTrigger' ? '⚡' : '⚡', desc: `${t.events}. Thin event detection that delegates to the service layer.`, files: [`force-app/main/default/triggers/${t.name}.trigger`], related: [t.svc], concepts: ['before/after triggers', 'Trigger.new / Trigger.old', 'bulkification'] })),
-  ...SERVICES.map(s => ({ id: s.id, title: s.name, type: 'Apex Service', phase: SERVICE_PHASE(s.id), icon: '🧠', desc: s.duty, files: [`force-app/main/default/classes/${s.name}.cls`, `force-app/main/default/classes/${testFor(s)}.cls`], related: [], concepts: ['with sharing', 'bulk-safe loops', 'unit-testable logic'] })),
-].forEach(o => { if (o) DETAILS[o.id] = o; });
-
-function TRIGGER_PHASE(name) {
-  return { LeadTrigger: 2, AccountTrigger: 3, OpportunityTrigger: 3, OpportunityStageTrigger: 4, OpportunityCampaignTrigger: 5, CampaignMemberStatusTrigger: 5, TaskActivityTrigger: 6, OpportunityForecastTrigger: 8 }[name] || 4;
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || defaultStore(); }
+  catch (e) { return defaultStore(); }
 }
-function SERVICE_PHASE(id) {
-  return { leadScoring: 2, accountService: 3, opportunityService: 4, campaignService: 5, activityService: 6, processAutomation: 7, forecastingService: 8, reportingService: 9, integrationService: 10, certificationPrep: 11 }[id] || 1;
+function defaultStore() {
+  return { done: {}, quiz: {}, best: {}, stars: {}, lastOpen: null };
 }
-function testFor(s) {
-  const map = { leadScoring: 'LeadManagementTest', accountService: 'AccountContactManagementTest', opportunityService: 'OpportunityManagementTest', campaignService: 'CampaignManagementTest', activityService: 'ActivityManagementTest', processAutomation: 'ProcessAutomationTest', forecastingService: 'ForecastingTerritoryTest', reportingService: 'ReportingServiceTest', integrationService: 'IntegrationServiceTest', certificationPrep: 'CertificationPrepServiceTest' };
-  return map[s.id];
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
 }
-SERVICES.forEach(s => { s.test = testFor(s); });
-
-/* Static metadata entries */
-const META_DETAILS = {
-  flowScoring: { title: 'Lead_Scoring_Flow', type: 'Screen Flow · Phase 2', desc: 'Interactive scoring screen reps can run to evaluate a lead manually.', files: ['force-app/main/default/flows/Lead_Scoring_Flow.flow-meta.xml'] },
-  flowNurture: { title: 'Auto_Update_Nurture_Status', type: 'Record-Triggered Flow · Phase 2', desc: 'Re-derives nurture status when lead criteria change.', files: ['force-app/main/default/flows/Auto_Update_Nurture_Status.flow-meta.xml'] },
-  flowLeadFollowUp: { title: 'Auto_Create_FollowUp_Task_On_Lead_Assignment', type: 'Record-Triggered Flow · Phase 2', desc: 'Schedules a follow-up task when a lead is assigned to a rep.', files: ['force-app/main/default/flows/Auto_Create_FollowUp_Task_On_Lead_Assignment.flow-meta.xml'] },
-  flowChildRecords: { title: 'Auto_Create_Child_Records_On_Account', type: 'Record-Triggered Flow · Phase 3', desc: 'Bootstraps default contacts when an account is created.', files: ['force-app/main/default/flows/Auto_Create_Child_Records_On_Account.flow-meta.xml'] },
-  flowAssignTasks: { title: 'Auto_Assign_Tasks_New_Opportunity', type: 'Record-Triggered Flow · Phase 4', desc: 'Assigns discovery tasks to the opportunity owner.', files: ['force-app/main/default/flows/Auto_Assign_Tasks_New_Opportunity.flow-meta.xml'] },
-  flowChatter: { title: 'Deal_Close_Chatter_Notification', type: 'Record-Triggered Flow · Phase 6', desc: 'Posts to the record feed when a deal closes.', files: ['force-app/main/default/flows/Deal_Close_Chatter_Notification.flow-meta.xml'] },
-  flowStale: { title: 'Auto_Close_Stale_Opportunities', type: 'Scheduled Flow · Phase 7', desc: 'Closes opportunities with no activity for N days.', files: ['force-app/main/default/flows/Auto_Close_Stale_Opportunities.flow-meta.xml'] },
-  flowEmail: { title: 'Weekly_Pipeline_Summary_Email', type: 'Scheduled Flow · Phase 7', desc: 'Emails reps their pipeline summary each week.', files: ['force-app/main/default/flows/Weekly_Pipeline_Summary_Email.flow-meta.xml'] },
-  permSet: { title: 'Sales_Cloud_User', type: 'Permission Set · Phase 1', desc: 'Object CRUD + field-level security for Sales Cloud users.', files: ['force-app/main/default/permissionsets/Sales_Cloud_User.permissionset-meta.xml'] },
-  approval: { title: 'Opportunity_Discount_Approval', type: 'Approval Process · Phase 7', desc: 'Step-based manager approval when discount exceeds the cap. Read at runtime by ProcessAutomationService via ProcessInstance.', files: ['force-app/main/default/approvalProcesses/Opportunity_Discount_Approval.approvalProcess-meta.xml'] },
-  assignment: { title: 'Lead Assignment Rules', type: 'Assignment Rule · Phase 2', desc: 'Routes leads by industry to dedicated queues.', files: ['force-app/main/default/assignmentRules/Lead.assignmentRules-meta.xml'] },
-  validation: { title: 'Validation Rules', type: 'Validation · Phases 2 & 4', desc: 'Enforce data quality: stage-skip guard, closed-deal lock, amount-for-high-probability, close-date, lead contact info, qualification date.', files: ['force-app/main/default/objects/Opportunity/validationRules/', 'force-app/main/default/objects/Lead/validationRules/'] },
-};
-Object.assign(DETAILS, META_DETAILS);
-
-/* ------------------------- state ------------------------- */
-const state = { tab: 'overview', sim: null };
-
-/* ------------------------- view container ------------------------- */
-const view = document.getElementById('view');
-
-/* ------------------------- tab rendering ------------------------- */
-
-function renderTab() {
-  view.innerHTML = '';
-  const t = state.tab;
-  if (t === 'overview') buildOverview();
-  if (t === 'data') buildDataModel();
-  if (t === 'wire') buildWiring();
-  if (t === 'flow') buildFlow();
-  if (t === 'integ') buildIntegrations();
-  if (t === 'phases') buildPhases();
-  requestAnimationFrame(() => { if (t === 'wire') connectWiring(); });
+function lessonDone(mid, li)  { return !!store.done[mid + ':' + li]; }
+function markDone(mid, li, v) { store.done[mid + ':' + li] = v; save(); }
+function moduleProgress(mid) {
+  const m = byId(mid);
+  if (!m) return { done: 0, total: 0, pct: 0, quizPct: 0, complete: 0, totalUnits: 0 };
+  const lessons = m.lessons.length;
+  let done = 0;
+  m.lessons.forEach((_, i) => { if (lessonDone(mid, i)) done++; });
+  // lessons are worth 2 units, quiz worth 1
+  const units = lessons * 2 + 1;
+  const earned = done * 2 + (store.quiz[mid] ? 1 : 0);
+  const pct = Math.round((earned / units) * 100);
+  const complete = earned >= units;
+  return { done, total: lessons, pct, quizPct: quizPctOf(mid), complete, earned, units };
 }
-
-/* ---------- 1. Overview ---------- */
-const LAYERS = [
-  { icon: '🎨', name: 'Presentation', sub: 'Lightning Experience · Reports · Dashboards · Quiz UI', id: 'pres', comps: [
-    { cid: 'report', label: '7 Reports', aid: 'reports' },
-    { cid: 'dash', label: '4 Dashboards', aid: 'dashboards' },
-    { cid: 'ps', label: 'Sales_Cloud_User', aid: 'permSet' },
-  ]},
-  { icon: '⚙️', name: 'Automation Layer', sub: 'Flows · Validation · Assignment · Approvals', id: 'auto', comps: FLOWS.map(f => ({ cid: f.id, label: f.name, aid: f.id })).concat([
-    { cid: 'vr', label: 'Validation Rules', aid: 'validation' },
-    { cid: 'ar', label: 'Assignment Rules', aid: 'assignment' },
-    { cid: 'ap', label: 'Discount Approval', aid: 'approval' },
-  ])},
-  { icon: '🧩', name: 'Apex Layer', sub: '8 triggers delegating to 10 service classes', id: 'apex', comps: [
-    { cid: 'trig', label: '8 Triggers', aid: 'leadTrigger' },
-    { cid: 'svc', label: '10 Service Classes', aid: 'leadScoring' },
-    { cid: 'pe', label: 'Integration_Event__e', aid: 'event' },
-    { cid: 'mdt', label: 'API_Configuration__mdt', aid: 'mdt' },
-  ]},
-  { icon: '🗃️', name: 'Data Layer', sub: 'Standard + custom objects (75+ custom fields)', id: 'data', comps: OBJECTS.slice(0, 12).map(o => ({ cid: o.name, label: o.name, aid: 'obj-' + o.name })) },
-];
-
-function buildOverview() {
-  view.innerHTML += `<div class="section-head"><h2>Layered Architecture</h2><p>Click a layer to expand, then click any component for details.</p></div>`;
-  LAYERS.forEach((L, i) => {
-    const layer = document.createElement('div');
-    layer.className = 'layer';
-    layer.innerHTML = `
-      <div class="ltop">
-        <div class="icon">${L.icon}</div>
-        <div><h3>${L.name}</h3><div class="sub">${L.sub}</div></div>
-        <span class="chev">▾</span>
-      </div>
-      <div class="lbody"></div>`;
-    const body = layer.querySelector('.lbody');
-    const chipsWrap = document.createElement('div');
-    chipsWrap.className = 'chips';
-    L.comps.forEach(c => {
-      const chip = document.createElement('span');
-      chip.className = 'chip';
-      chip.textContent = c.label;
-      chip.addEventListener('click', () => openDetail(c.aid));
-      chipsWrap.appendChild(chip);
-    });
-    body.appendChild(chipsWrap);
-    layer.querySelector('.ltop').addEventListener('click', () => layer.classList.toggle('open'));
-    if (i === 0) layer.classList.add('open');
-    view.appendChild(layer);
+function quizPctOf(mid) {
+  const m = byId(mid);
+  if (!m || !store.best[mid]) return 0;
+  return Math.round((store.best[mid] / m.quiz.questions.length) * 100);
+}
+function overallPct() {
+  const rows = MODULES.map(m => {
+    const p = moduleProgress(m.id);
+    return p.units ? p.earned / p.units * 100 : 0;
   });
+  return Math.round(rows.reduce((a, b) => a + b, 0) / rows.length);
 }
 
-/* ---------- 2. Data model ---------- */
-function buildDataModel() {
-  view.innerHTML = `<div class="section-head"><h2>Data Model</h2><p>Click an object or relationship to inspect it.</p></div>`;
+function byId(id) { return MODULES.find(m => m.id === id); }
 
-  const wrap = document.createElement('div');
-  wrap.className = 'two-col';
-  wrap.innerHTML = `<div class="maintab">
+/* ------------------------- routing ------------------------- */
 
-      <div class="group-label">Custom fields on standard objects &amp; custom objects</div>
-      <div class="grid"></div>
-    </div>
-    <div class="relspanel">
-      <div class="card rels" style="cursor:default">
-        <h4>Relationships</h4>
-        <div></div>
-      </div>
+let route = { view: 'home', mid: null, li: null };
+
+function navigate(view, mid, li) {
+  route = { view, mid, li: li != null ? li : null };
+  history.replaceState(null, '', '#' + hashFor());
+  render();
+}
+function hashFor() {
+  if (route.view === 'phase') return '/phase/' + route.mid;
+  if (route.view === 'lesson') return '/lesson/' + route.mid + '/' + route.li;
+  if (route.view === 'quiz')  return '/quiz/' + route.mid;
+  return '/';
+}
+function parseHash() {
+  const h = decodeURIComponent((location.hash || '#/').replace(/^#/, ''));
+  const parts = h.split('/').filter(Boolean);
+  if (parts[0] === 'phase') return { view: 'phase', mid: parts[1] };
+  if (parts[0] === 'lesson') return { view: 'lesson', mid: parts[1], li: Number(parts[2]) };
+  if (parts[0] === 'quiz')   return { view: 'quiz', mid: parts[1] };
+  return { view: 'home' };
+}
+
+/* ------------------------- renderer ------------------------- */
+
+const view = $('#view');
+
+function render() {
+  const mod = route.mid ? byId(route.mid) : null;
+  const r = parseHash(); // keep in sync with friendly URLs
+  document.title = 'Sales Cloud Academy' + (mod ? ' · ' + mod.title : '');
+
+  // sidebar
+  renderSidebar();
+
+  // topbar progress
+  const tp = $('#topPct');
+  if (tp) tp.textContent = overallPct() + '%';
+  const tbar = $('#topBar');
+  if (tbar) tbar.style.width = overallPct() + '%';
+  bindTopSearch();
+
+  if (r.view === 'phase')  return renderModule(mod);
+  if (r.view === 'lesson') return renderLesson(mod, Math.min(Number(r.li) || 0, mod.lessons.length - 1));
+  if (r.view === 'quiz')   return renderQuiz(mod);
+  renderHome();
+}
+
+/* ------------------------- sidebar ------------------------- */
+
+function renderSidebar() {
+  const aside = $('aside.sidebar');
+  aside.innerHTML = `
+    <div class="side-brand">
+      <div class="logo">☁️</div>
+      <div><b>Sales Cloud Academy</b><span>20-week roadmap</span></div>
     </div>`;
 
-  const grid = wrap.querySelector('.grid');
-  const relBox = wrap.querySelector('.rels div');
+  const nav = document.createElement('nav');
+  nav.className = 'side-nav';
 
-  OBJECTS.forEach(o => {
-    const card = mkCard(o.name, o.icon, o.desc, o, 'obj-' + o.name);
-    card.dataset.er = o.name;
+  const home = document.createElement('a');
+  home.href = '#/';
+  home.className = 'side-link' + (route.view === 'home' ? ' active' : '');
+  home.innerHTML = `<span class="sli">🏠</span> Dashboard`;
+  nav.appendChild(home);
+
+  MODULES.forEach(m => {
+    const p = moduleProgress(m.id);
+    const a = document.createElement('a');
+    a.href = '#/phase/' + m.id;
+    a.className = 'side-phase' + (route.mid === m.id ? ' active' : '');
+    a.innerHTML = `
+      <span class="sp-n" style="border-color:${m.color}">${String(m.n).padStart(2, '0')}</span>
+      <span class="sp-body">
+        <span class="sp-title">${m.title}</span>
+        <span class="sp-bar"><i style="width:${p.pct}%;background:${m.color}"></i></span>
+      </span>
+      <span class="sp-pct">${p.pct}%</span>
+      ${p.complete ? '<span class="sp-ok">✓</span>' : ''}`;
+    nav.appendChild(a);
+  });
+
+  aside.appendChild(nav);
+
+  const progWrap = document.createElement('div');
+  progWrap.className = 'side-progress';
+  const op = overallPct();
+  progWrap.innerHTML = `<div class="sp-bar big"><i style="width:${op}%"></i></div>
+    <div class="side-prog-label"><b>${op}%</b> of roadmap complete</div>`;
+  aside.appendChild(progWrap);
+}
+
+/* ------------------------- home ------------------------- */
+
+function renderHome() {
+  const op = overallPct();
+  const totalLessons = MODULES.reduce((a, m) => a + m.lessons.length, 0);
+  const totalMin = MODULES.reduce((a, m) => a + m.lessons.reduce((x, l) => x + l.mins, 0), 0) + MODULES.reduce((a, m) => a + m.quiz.mins, 0);
+  const totalDone = MODULES.reduce((a, m) => a + moduleProgress(m.id).earned, 0);
+  const totalUnits = MODULES.reduce((a, m) => a + moduleProgress(m.id).units, 0);
+
+  // continue card
+  let next = null;
+  for (const m of MODULES) {
+    for (let i = 0; i < m.lessons.length; i++) {
+      if (!lessonDone(m.id, i)) { next = { m, i }; break; }
+    }
+    if (next) break;
+  }
+  if (!next) next = { m: MODULES[0], i: 0 };
+  let resume = null;
+  if (store.lastOpen && byId(store.lastOpen.mid)) {
+    const lm = byId(store.lastOpen.mid);
+    resume = { m: lm, li: Math.max(0, Math.min(store.lastOpen.li, lm.lessons.length - 1)) };
+  }
+  if (!resume) resume = { m: next.m, li: next.i };
+  const rm = resume.m;
+
+  view.innerHTML = `
+    <div class="home-hero reveal">
+      <div>
+        <div class="hero-kicker">Salesforce Sales Cloud · study from zero</div>
+        <h1 class="hero-title">Become <span class="grad">sales-cloud certified</span>, phase by phase.</h1>
+        <p class="hero-sub">${MODULES.length} guided modules, ${totalLessons} lessons, ${MODULES.length} quizzes — with real metadata in the repo to deploy and practice on.</p>
+        <div class="hero-actions">
+          <button class="btn primary" id="startBtn">${next ? '▶ Continue learning' : '🎉 Restart'}</button>
+          <button class="btn ghost" id="phasesBtn">Browse all phases</button>
+          <span class="hero-meta">📅 ~20 weeks · self-paced</span>
+        </div>
+      </div>
+      <div class="ring-wrap">
+        <div class="ring" style="--p:${op}"><span>${op}<small>%</small></span></div>
+        <div class="ring-caption">roadmap progress</div>
+      </div>
+    </div>
+
+    <div class="stats reveal">
+      <div class="stat"><div class="st-n">${totalDone}<small>/${totalUnits}</small></div><div class="st-l">units completed</div></div>
+      <div class="stat"><div class="st-n">${MODULES.filter(m => moduleProgress(m.id).complete).length}<small>/11</small></div><div class="st-l">phases mastered</div></div>
+      <div class="stat"><div class="st-n">${MODULES.filter(m => store.best[m.id] >= m.quiz.questions.length).length}<small>/11</small></div><div class="st-l">quizzes passed</div></div>
+      <div class="stat"><div class="st-n">${totalMin}<small> min</small></div><div class="st-l">~ total study time</div></div>
+    </div>
+
+    <div class="home-cards">
+      <div class="card continue-card" style="--c:${rm.color}">
+        <div class="cc-top"><span class="cc-label">Continue where you left off</span><span class="pill">Phase ${rm.n}</span></div>
+        <h3>${resume.li != null && resume.li < rm.lessons.length ? rm.lessons[resume.li].title : rm.lessons[0].title}</h3>
+        <div class="cc-sub">${rm.title}</div>
+        <div class="sp-bar"><i style="width:${moduleProgress(rm.id).pct}%;background:${rm.color}"></i></div>
+        <button class="btn primary sm" id="resumeBtn">Resume →</button>
+      </div>
+      <div class="card next-card" style="--c:${next.m.color}">
+        <div class="cc-top"><span class="cc-label">Next up</span><span class="pill">Phase ${next.m.n}</span></div>
+        <h3>${next.i != null && next.i < next.m.lessons.length ? next.m.lessons[next.i].title : next.m.lessons[0].title}</h3>
+        <div class="cc-sub">${next.m.lessons[next.i].mins} min · ${next.m.lessons.length} lessons · ${next.m.quiz.questions.length}-question quiz</div>
+        <button class="btn sm" id="nextBtn">Open →</button>
+      </div>
+      <div class="card streak-card" style="--c:#e8b93d">
+        <div class="cc-top"><span class="cc-label">Learning tips</span></div>
+        <h3>3 wins today</h3>
+        <ul class="tips">
+          <li>Finish <b>one lesson</b> then take its phase quiz.</li>
+          <li>Re-create flows / reports in your own org.</li>
+          <li>Use <kbd>/</kbd> to search anything.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="grid-head reveal"><h2>Your roadmap</h2><span>${MODULES.length} phases · study in order or jump anywhere</span></div>
+    <div class="module-grid reveal" id="modGrid"></div>`;
+
+  $('#startBtn').addEventListener('click', () => navigate('lesson', resume.m.id, resume.li != null && resume.li < rm.lessons.length ? resume.li : 0));
+  $('#resumeBtn').addEventListener('click', () => navigate('lesson', resume.m.id, resume.li != null && resume.li < rm.lessons.length ? resume.li : 0));
+  $('#nextBtn').addEventListener('click', () => navigate('lesson', next.m.id, next.i));
+  $('#phasesBtn').addEventListener('click', () => navigate('phase', MODULES[0].id));
+
+  const grid = $('#modGrid');
+  MODULES.forEach(m => {
+    const p = moduleProgress(m.id);
+    const card = document.createElement('a');
+    card.href = '#/phase/' + m.id;
+    card.className = 'mod-card';
+    card.style.setProperty('--c', m.color);
+    card.innerHTML = `
+      <div class="mc-top">
+        <span class="mc-num">${String(m.n).padStart(2, '0')}</span>
+        <span class="mc-ico">${m.icon}</span>
+        ${p.complete ? '<span class="mc-done">✓ completed</span>' : ''}
+      </div>
+      <h3>${esc(m.title)}</h3>
+      <div class="mc-tag">${esc(m.tagline)}</div>
+      <div class="mc-prog">
+        <div class="sp-bar"><i style="width:${p.pct}%;background:${m.color}"></i></div>
+        <div class="mc-sub">${p.done}/${p.total} lessons · ${p.quizPct}% quiz</div>
+      </div>
+      <div class="mc-foot">
+        <span>${m.lessons.length} lessons · ${m.quiz.questions.length} quiz</span>
+        <span class="mc-arrow">→</span>
+      </div>`;
     grid.appendChild(card);
   });
-
-  RELS.forEach(r => {
-    const row = document.createElement('div');
-    row.className = 'card';
-    row.innerHTML = `<span class="ari">${r.a}</span><b>${r.type}</b><span class="ari">${r.b}</span>
-                     <span class="desc" style="margin-top:4px">${r.note}</span>`;
-    row.addEventListener('click', () => {
-      grid.querySelectorAll('.card').forEach(c => c.classList.remove('dim', 'hot'));
-      grid.querySelectorAll('.card[data-er]').forEach(c => {
-        const n = c.dataset.er;
-        if (r.a.split(' / ').includes(n) || r.b.split(' / ').includes(n)) c.classList.add('hot');
-      });
-    });
-    relBox.appendChild(row);
-  });
-
-  view.appendChild(wrap);
 }
 
-/* ---------- 3. Wiring: triggers → services ---------- */
-function buildWiring() {
+/* ------------------------- module/phase page ------------------------- */
+
+function renderModule(mod) {
+  const p = moduleProgress(mod.id);
+  const quizScore = store.best[mod.id];
   view.innerHTML = `
-    <div class="section-head"><h2>Triggers → Services</h2>
-    <p>Hover a trigger to trace it to its service. Click anything for details.</p></div>
-    <div class="wiring" id="wiring">
-      <svg class="links" id="wlinks"></svg>
-      <div class="wcol" id="wtrig"><h4>Triggers (event detection)</h4></div>
-      <div class="wcol" id="wsvc"><h4>Services (business logic)</h4></div>
+    <div class="crumb reveal"><a href="#/">Dashboard</a> <span>›</span> <b>${mod.title}</b></div>
+
+    <div class="phase-hero reveal" style="--c:${mod.color}">
+      <div class="ph-ico">${mod.icon}</div>
+      <div class="ph-body">
+        <div class="ph-kicker">Phase ${String(mod.n).padStart(2, '0')} · ${mod.tagline}</div>
+        <h1>${mod.title}</h1>
+        <div class="ph-obj"><span>By the end you can:</span>
+          <ul>${mod.objectives.map(o => `<li>${esc(o)}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div class="ph-side">
+        <div class="ring sm" style="--p:${p.pct};--c:${mod.color}"><span>${p.pct}<small>%</small></span></div>
+        <div class="ph-stats">
+          <span>${p.done}/${p.total} lessons</span>
+          <span>${store.quiz[mod.id] ? '✓ quiz taken' : 'quiz pending'}</span>
+        </div>
+        <a class="btn ghost sm" target="_blank" rel="noopener"
+           href="${GUIDE}${mod.guide}">📄 Full guide on GitHub</a>
+      </div>
     </div>
-    <div style="margin-top:20px">
-      <div class="group-label">Declarative automation (invoked from flows / approval / scheduled jobs)</div>
-      <div class="grid">${SURFACE.map(s => mkWiringSurface(s)).join('')}</div>
+
+    <div class="lessons reveal">
+      ${mod.lessons.map((l, i) => `
+        <a class="lesson-row" href="#/lesson/${mod.id}/${i}" style="--c:${mod.color}">
+          <span class="lr-state">${lessonDone(mod.id, i) ? '<span class="lr-done">✓</span>' : String(i + 1).padStart(2, '0')}</span>
+          <span class="lr-info">
+            <b>${l.title}</b>
+            <span class="lr-meta">${l.mins} min</span>
+          </span>
+          <span class="lr-arrow">→</span>
+        </a>`).join('')}
+    </div>
+
+    <div class="quiz-card reveal" style="--c:${mod.color}">
+      <div class="qc-left">
+        <div class="qc-ico">🧠</div>
+        <div>
+          <h3>Module quiz · check your understanding</h3>
+          <p>${mod.quiz.questions.length} questions · ${mod.quiz.mins} min.
+             ${quizScore != null ? `Your best: <b>${quizScore}/${mod.quiz.questions.length}</b> (${Math.round(quizScore / mod.quiz.questions.length * 100)}%).` : 'Not attempted yet.'}
+          </p>
+        </div>
+      </div>
+      <div class="qc-right">
+        ${quizScore != null && quizScore === mod.quiz.questions.length ? '<span class="qc-perfect">★ perfect</span>' : ''}
+        <a class="btn primary" href="#/quiz/${mod.id}">${quizScore != null ? 'Retake quiz' : 'Take quiz →'}</a>
+      </div>
+    </div>
+
+    <div class="artifacts reveal">
+      <h3>📦 Real artifacts in this repo</h3>
+      <div class="artifacts-grid">
+        ${mod.art.map(a => `
+          <a class="artifact" target="_blank" rel="noopener"
+             href="https://github.com/AbdoAddouli/Salesforce-SalesCloud-RoadMap/blob/main/${a.href}" style="--c:${mod.color}">
+            <span class="a-ico">🗂️</span> <span>${a.label}</span>
+          </a>`).join('')}
+      </div>
+    </div>
+
+    <div class="phase-nav reveal">
+      ${mod.n > 1 ? `<a class="btn ghost" href="#/phase/${MODULES[mod.n - 2].id}">← ${MODULES[mod.n - 2].title}</a>` : '<span></span>'}
+      ${mod.n < MODULES.length
+        ? `<a class="btn primary" href="#/phase/${MODULES[mod.n].id}">${MODULES[mod.n].title} →</a>`
+        : `<a class="btn primary" href="#/quiz/${mod.id}">🎯 Take the final quiz</a>`}
+    </div>`;
+}
+
+/* ------------------------- lesson page ------------------------- */
+
+function renderLesson(mod, li) {
+  const lesson = mod.lessons[li];
+  const prevI = li > 0 ? li - 1 : null;
+  const nextI = li < mod.lessons.length - 1 ? li + 1 : null;
+  const done = lessonDone(mod.id, li);
+
+  view.innerHTML = `
+    <div class="crumb reveal"><a href="#/">Dashboard</a> <span>›</span> <a href="#/phase/${mod.id}">${mod.title}</a> <span>›</span> <b>${lesson.title}</b></div>
+
+    <div class="lesson-wrap reveal">
+      <aside class="lesson-toc">
+        <div class="toc-title">${mod.title}</div>
+        ${mod.lessons.map((l, i) => `
+          <a href="#/lesson/${mod.id}/${i}" class="toc-item ${i === li ? 'active' : ''}">
+            <span class="toc-state">${lessonDone(mod.id, i) ? '✓' : i + 1}</span>
+            <span>${l.title}<span class="toc-min">${l.mins}′</span></span>
+          </a>`).join('')}
+        <a href="#/quiz/${mod.id}" class="toc-item toc-quiz" style="--c:${mod.color}">
+          <span class="toc-state">🧠</span><span>Module quiz</span>
+        </a>
+      </aside>
+
+      <article class="lesson article">
+        <div class="lesson-head" style="--c:${mod.color}">
+          <div class="lh-meta">Phase ${String(mod.n).padStart(2, '0')} · Lesson ${li + 1} of ${mod.lessons.length} · ${lesson.mins} min</div>
+          <h1>${lesson.title}</h1>
+        </div>
+        <div class="chips">
+          ${mod.objectives.map((o, i) => `<span class="chip-o">${o}</span>`).join('')}
+        </div>
+
+        <div class="blocks">${lesson.blocks.map(renderBlock).join('')}</div>
+
+        <div class="lesson-foot">
+          <div class="lf-left">
+            ${done
+              ? '<button class="btn ghost sm" id="unbtn">↩ Mark as unlearned</button>'
+              : `<button class="btn primary" id="doneBtn">✓ Mark lesson complete</button>`}
+          </div>
+          <div class="lf-right">
+            ${prevI != null ? `<a class="btn ghost sm" href="#/lesson/${mod.id}/${prevI}">← Prev</a>` : ''}
+            ${nextI != null
+              ? `<a class="btn primary sm" href="#/lesson/${mod.id}/${nextI}">Next →</a>`
+              : `<a class="btn primary sm" href="#/quiz/${mod.id}">Take the quiz →</a>`}
+          </div>
+        </div>
+      </article>
     </div>`;
 
-  const wtrig = document.getElementById('wtrig');
-  const wsvc = document.getElementById('wsvc');
-
-  view.querySelectorAll('[data-open]').forEach(el => {
-    el.addEventListener('click', () => openDetail(el.dataset.open));
-  });
-
-  TRIGGERS.forEach(t => {
-    const c = mkCard(t.name, '⚡', t.events, t, t.id);
-    c.dataset.svc = t.svc;
-    c.addEventListener('mouseenter', () => hotLink(t.svc));
-    c.addEventListener('mouseleave', () => unhotLink());
-    wtrig.appendChild(c);
-  });
-
-  SERVICES.forEach(s => {
-    const c = mkCard(s.name, '🛠️', s.duty, s, s.id);
-    c.dataset.linksTo = 'service';
-    c.addEventListener('mouseenter', () => hotLink(s.id));
-    c.addEventListener('mouseleave', () => unhotLink());
-    wsvc.appendChild(c);
-  });
+  const b = $('#doneBtn'); const u = $('#unbtn');
+  if (b) b.addEventListener('click', () => { markDone(mod.id, li, true); store.lastOpen = { mid: mod.id, li }; save(); toast('Lesson complete! 🎉'); render(); });
+  if (u) u.addEventListener('click', () => { markDone(mod.id, li, false); render(); });
+  store.lastOpen = { mid: mod.id, li }; save();
+  requestAnimationFrame(() => window.scrollTo(0, 0));
 }
 
-function mkWiringSurface(s) {
-  return `<div class="card" data-open="${s.id}"><div class="name">${s.name}</div>
-          <div class="badge b-type" style="margin-top:8px">${s.type}</div>
-          <div class="desc">${s.desc}</div></div>`;
+/* Block renderer for the curriculum blocks */
+function renderBlock(b) {
+  switch (b.t) {
+    case 'p': return `<p>${esc(b.x)}</p>`;
+    case 'h': return `<h2>${esc(b.x)}</h2>`;
+    case 'list': return `<ul class="tick-list">${b.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
+    case 'num': return `<ol>${b.items.map(i => `<li>${esc(i)}</li>`).join('')}</ol>`;
+    case 'table': return `
+      <div class="tbl"><table>
+        <thead><tr>${b.head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${b.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table></div>`;
+    case 'code': {
+      const cid = 'c' + cyrb53(b.x);
+      const bT = b.lang || 'text';
+      return `<div class="codeblock">
+        <div class="cb-head"><span class="cb-lang">${esc(bT)}</span><button class="cb-copy" data-copy="${cid}" title="Copy">⧉ Copy</button></div>
+        <pre id="${cid}" class="lang-${esc(bT)}"><code>${esc(b.x)}</code></pre>
+      </div>`;
+    }
+    case 'callout': {
+      const icons = { tip: '💡', warn: '⚠️' };
+      return `<div class="callout ${esc(b.kind)}"><div class="co-ico">${icons[b.kind] || '💡'}</div><div>${esc(b.x)}</div></div>`;
+    }
+    case 'selfcheck': return `
+      <div class="selfcheck">
+        <div class="sc-head"><span class="sc-qmark">?</span> <span>Check yourself</span></div>
+        <div class="sc-q">${esc(b.q)}</div>
+        <div class="sc-actions"><button class="btn sm ghost showA">Show answer</button></div>
+        <div class="sc-a" hidden>${esc(b.a)}</div>
+      </div>`;
+    default: return '';
+  }
 }
 
-/* Draw the bezier links between trigger and service cards. */
-function connectWiring() {
-  const wiring = document.getElementById('wiring');
-  const svg = document.getElementById('wlinks');
-  const trig = document.getElementById('wtrig');
-  if (!wiring || !svg) return;
-  const cards = Array.from(trig.querySelectorAll('.card'));
-  svg.setAttribute('width', wiring.offsetWidth);
-  svg.setAttribute('height', wiring.offsetHeight);
-  svg.innerHTML = '';
+/* ------------------------- quiz page ------------------------- */
 
-  cards.forEach(card => {
-    const svcId = card.dataset.svc;
-    const svcCard = Array.from(document.querySelectorAll('#wsvc .card'))
-      .find(c => c.querySelector('.name').textContent.trim() === SERVICES.find(s => s.id === svcId).name);
-    if (!svcCard) return;
-    const r1 = card.getBoundingClientRect();
-    const r2 = svcCard.getBoundingClientRect();
-    const w  = wiring.getBoundingClientRect();
-    const x1 = r1.right - w.left;
-    const y1 = r1.top + r1.height / 2 - w.top;
-    const x2 = r2.left - w.left;
-    const y2 = r2.top + r2.height / 2 - w.top;
-    const mx = (x1 + x2) / 2;
-    const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('class', 'wlink');
-    path.dataset.svc = svcId;
-    svg.appendChild(path);
-  });
-}
-
-function hotLink(svcId) {
-  document.querySelectorAll('#wsvc .card').forEach(c => c.classList.remove('hot'));
-  document.querySelectorAll('path.wlink').forEach(p => p.classList.remove('link-hot'));
-  const target = Array.from(document.querySelectorAll('#wsvc .card'))
-    .find(c => c.querySelector('.name').textContent.trim() === SERVICES.find(s => s.id === svcId)?.name);
-  if (target) target.classList.add('hot');
-  document.querySelectorAll(`path.wlink[data-svc="${svcId}"]`).forEach(p => p.classList.add('link-hot'));
-}
-function unhotLink() {
-  document.querySelectorAll('#wsvc .card').forEach(c => c.classList.remove('hot'));
-  document.querySelectorAll('path.wlink').forEach(p => p.classList.remove('link-hot'));
-}
-
-/* ---------- 4. Sales flow simulation ---------- */
-function buildFlow() {
-  state.sim = { step: -1, timer: null };
+function renderQuiz(mod) {
+  const qs = mod.quiz.questions;
+  const prevBest = store.quiz[mod.id]; // fractional 0..1
   view.innerHTML = `
-    <div class="section-head"><h2>End-to-End Sales Process</h2>
-    <p>Watch a deal travel from lead to dashboard. Click any step for detail.</p></div>
-    <div class="toolbar">
-      <button class="btn primary" id="playBtn">▶ Simulate deal</button>
-      <button class="btn" id="resetBtn">↺ Reset</button>
-      <span class="subtle" id="simHint">12 steps · 800ms each</span>
+    <div class="crumb reveal"><a href="#/">Dashboard</a> <span>›</span> <a href="#/phase/${mod.id}">${mod.title}</a> <span>›</span> <b>Quiz</b></div>
+
+    <div class="quiz-top reveal" style="--c:${mod.color}">
+      <div>
+        <div class="ph-kicker">Phase ${String(mod.n).padStart(2, '0')} · ${mod.quiz.title}</div>
+        <h1>${mod.icon} ${mod.title} — Quiz</h1>
+        <p class="qc-sub">${qs.length} questions. Answer all, get instant feedback + explanations, then save your score.</p>
+      </div>
+      <div class="quiz-best">
+        ${prevBest != null
+          ? `Best: <b>${Math.round(prevBest * qs.length)}/${qs.length}</b> · ${Math.round(prevBest * 100)}%`
+          : 'No score yet'}
+      </div>
     </div>
-    <div class="pipeline" id="pipe"></div>`;
 
-  const pipe = document.getElementById('pipe');
-  FLOW_STEPS.forEach((s, i) => {
-    const step = document.createElement('div');
-    step.className = 'step';
-    step.dataset.i = i;
-    step.innerHTML = `<div class="sn">STEP ${String(i + 1).padStart(2, '0')}</div>
-      <div class="st">${s.icon} ${s.t}</div><div class="sd">${s.d}</div>`;
-    step.addEventListener('click', () => openDetail('step' + i));
-    pipe.appendChild(step);
-    if (i < FLOW_STEPS.length - 1) pipe.insertAdjacentHTML('beforeend', '<span class="arrow">→</span>');
+    <div class="quiz-list reveal" id="quizList"></div>
+    <div class="lesson-foot reveal" id="quizFoot"></div>`;
+
+  const list = $('#quizList');
+  qs.forEach((q, qi) => {
+    const item = document.createElement('div');
+    item.className = 'q-item';
+    item.dataset.qi = qi;
+    item.innerHTML = `
+      <div class="q-head"><span class="q-num">Q${qi + 1}</span><span class="q-prog"></span></div>
+      <div class="q-text">${esc(q.q)}</div>
+      <div class="q-opts">
+        ${q.opts.map((o, oi) => `
+          <button class="q-opt" data-oi="${oi}">
+            <span class="q-letter">${String.fromCharCode(65 + oi)}</span>
+            <span class="q-otext">${esc(o)}</span>
+            <span class="q-mark"></span>
+          </button>`).join('')}
+      </div>
+      <div class="q-why" hidden><div class="qw-label"></div><div class="qw-text">${esc(q.why)}</div></div>`;
+    list.appendChild(item);
   });
 
-  FLOW_STEPS.forEach((s, i) => { DETAILS['step' + i] = { title: FLOW_STEPS[i].t, type: 'Process step', phase: i + 1, desc: FLOW_STEPS[i].d, files: ['salesCloud Roadmap/ guides'], concepts: ['See ARCHITECTURE.md §4'] }; });
+  // footer buttons
+  const foot = $('#quizFoot');
+  foot.innerHTML = `
+    <div class="lf-left"><button class="btn ghost sm" id="resetQuiz">↺ Reset</button></div>
+    <div class="lf-right">
+      <button class="btn primary" id="saveScore" disabled>✓ Save my score</button>
+      <a class="btn ghost sm" href="#/phase/${mod.id}">Back to module</a>
+    </div>`;
 
-  document.getElementById('playBtn').addEventListener('click', playSim);
-  document.getElementById('resetBtn').addEventListener('click', resetSim);
-}
+  $('#resetQuiz').addEventListener('click', () => renderQuiz(mod));
 
-function playSim() {
-  const steps = document.querySelectorAll('#pipe .step');
-  resetSim();
-  state.sim.step = -1;
-  state.sim.timer = setInterval(() => {
-    state.sim.step++;
-    if (state.sim.step >= steps.length) { clearInterval(state.sim.timer); return; }
-    steps[state.sim.step].classList.add('playing');
-    if (state.sim.step > 0) steps[state.sim.step - 1].classList.remove('playing');
-    steps.forEach((s, i) => { if (i < state.sim.step) s.classList.add('done'); });
-  }, 800);
-}
-function resetSim() {
-  clearInterval(state.sim.timer);
-  document.querySelectorAll('#pipe .step').forEach(s => s.classList.remove('done', 'playing'));
-}
+  const saveBtn = $('#saveScore');
+  let answered = 0, score = 0;
+  const reset = () => { answered = 0; score = 0; saveBtn.disabled = true; };
 
-/* ---------- 5. Integrations ---------- */
-function buildIntegrations() {
-  view.innerHTML = `
-    <div class="section-head"><h2>Integration Architecture</h2>
-    <p>Hit "Simulate REST call" and watch the traffic in the console below.</p></div>
-    <div class="pipeline" id="ipipe"></div>
-    <div class="toolbar">
-      <button class="btn primary" id="simBtn">▶ Simulate REST call</button>
-      <button class="btn" id="clrBtn">✖ Clear</button>
-    </div>
-    <div class="console" id="con"><div class="line">// integration console — ready</div></div>`;
+  $$('.q-item', list).forEach(item => {
+    const qi = +item.dataset.qi;
+    const prog = $('.q-prog', item);
 
-  const pipe = document.getElementById('ipipe');
-  INTEG_STEPS.forEach((s, i) => {
-    const step = document.createElement('div');
-    step.className = 'step';
-    step.dataset.i = i;
-    step.innerHTML = `<div class="sn">NODE ${String(i + 1).padStart(2, '0')}</div>
-      <div class="st">${s.icon} ${s.t}</div><div class="sd">${s.d}</div>`;
-    step.addEventListener('click', () => openDetail('istep' + i));
-    pipe.appendChild(step);
-    if (i < INTEG_STEPS.length - 1) pipe.insertAdjacentHTML('beforeend', '<span class="arrow">→</span>');
+    $$('.q-opt', item).forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (item.dataset.state) return; // already answered
+        const oi = +btn.dataset.oi;
+        const correct = oi === qs[qi].a;
+        item.dataset.state = correct ? 'right' : 'wrong';
+        prog.textContent = item.dataset.state === 'right' ? '✓ correct' : '✗';
+        prog.classList.add(item.dataset.state === 'right' ? 'ok' : 'bad');
+
+        $$('.q-opt', item).forEach(o => {
+          const t = +o.dataset.oi;
+          o.classList.add(t === qs[qi].a ? 'right' : 'dim');
+          if (t === oi && !correct) o.classList.add('wrong');
+          o.disabled = true;
+        });
+        const why = $('.q-why', item);
+        why.hidden = false;
+        $('.qw-label', why).textContent = item.dataset.state === 'right' ? '🎉 That\u2019s right' : '🙈 Not quite';
+        why.classList.add(item.dataset.state === 'right' ? 'ok' : 'bad');
+
+        answered++; if (correct) score++;
+        saveBtn.disabled = answered < qs.length;
+        if (answered === qs.length) {
+          const pct = Math.round(score / qs.length * 100);
+          toast(`Quiz complete: ${score}/${qs.length} (${pct}%)`);
+          if (pct === 100) confetti();
+        }
+      });
+    });
   });
 
-  INTEG_STEPS.forEach((s, i) => { DETAILS['istep' + i] = { title: INTEG_STEPS[i].t, type: 'Integration node', phase: 10, desc: INTEG_STEPS[i].d, files: [], concepts: ['Http callout', 'JSON serialize/deserialize', 'Webhook ingest'] }; });
-
-  const con = document.getElementById('con');
-  const log = (html) => { con.insertAdjacentHTML('beforeend', '<div class="line">' + html + '</div>'); con.scrollTop = con.scrollHeight; };
-
-  document.getElementById('simBtn').addEventListener('click', () => {
-    log('<b>POST</b> https://api.example.com/orders');
-    setTimeout(() => log('&nbsp;&nbsp;← HTTP 200 OK (12ms)'), 350);
-    setTimeout(() => log('&nbsp;&nbsp;✔ logged to <b>Integration_Log__c</b>'), 620);
-    setTimeout(() => log('&nbsp;&nbsp;⚡ published <b>Integration_Event__e</b>'), 900);
-  });
-  document.getElementById('clrBtn').addEventListener('click', () => { con.innerHTML = '<div class="line">// integration console — ready</div>'; });
-}
-
-/* ---------- 6. Phases ---------- */
-function buildPhases() {
-  view.innerHTML = `
-    <div class="section-head"><h2>Learning Roadmap</h2>
-    <p>Click a row to open its guide on GitHub. Click an artifact to inspect it.</p></div>
-    <table class="phases" id="phaTab">
-      <thead><tr><th>Phase</th><th>Topic</th><th>Focus</th><th>Artifacts</th></tr></thead>
-      <tbody></tbody>
-    </table>`;
-  const tb = document.querySelector('#phaTab tbody');
-  PHASES.forEach(p => {
-    const tr = document.createElement('tr');
-    const arts = p.art.map(a => `<span class="art">${a}</span>`).join('<br>');
-    tr.innerHTML = `<td><b>${String(p.n).padStart(2, '0')}</b></td>
-      <td class="subtle">${p.t}</td><td>${p.topic}</td><td>${arts}</td>`;
-    tr.addEventListener('click', () => window.open(`https://github.com/AbdoAddouli/Salesforce-SalesCloud-RoadMap/blob/main/salesCloud%20Roadmap/${p.guide}`, '_blank'));
-    tb.appendChild(tr);
+  saveBtn.addEventListener('click', () => {
+    const pct = score / qs.length;
+    if (prevBest == null || pct > prevBest) {
+      store.quiz[mod.id] = pct;
+      store.best[mod.id] = Math.round(pct * qs.length);
+      save();
+      toast('Score saved — keep it up! 🏆');
+      saveBtn.textContent = '✓ Saved — nice work!';
+      saveBtn.disabled = true;
+    }
+    renderSidebar();
   });
 }
 
-/* ---------- shared card factory ---------- */
-function mkCard(title, icon, desc, meta, aid) {
-  const c = document.createElement('div');
-  c.className = 'card';
-  c.innerHTML = `<div class="name">${icon} ${title}</div><div class="desc">${desc}</div>`;
-  c.addEventListener('click', () => openDetail(aid));
-  c.dataset.search = `${title} ${desc}`.toLowerCase();
-  return c;
+/* ------------------------- toast ------------------------- */
+
+let toastTimer;
+function toast(msg) {
+  let t = $('#toast');
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-/* ---------- detail drawer ---------- */
-function openDetail(aid) {
-  const d = DETAILS[aid];
-  const drawer = document.getElementById('drawer');
-  const body = document.getElementById('drawerBody');
-  if (!d) { alert('No detail for: ' + aid); return; }
-  const related = (d.related || []).map(r => `<span class="drel" data-aid="${r}">${prettyId(r)}</span>`).join('');
-  body.innerHTML = `
-    <div class="dhead">
-      <div class="dicon">${d.icon || '📄'}</div>
-      <div><h3>${d.title}</h3><div class="dtype">${d.type}${d.phase ? ' · Phase ' + d.phase : ''}</div></div>
-      <button class="close" id="drawerClose">✕</button>
-    </div>
-    <p style="font-size:13px;line-height:1.6">${d.desc || ''}</p>
-    ${related ? `<div class="dsec"><h4>Related</h4>${related}</div>` : ''}
-    <div class="dsec"><h4>Concepts in this phase</h4><div class="dlists">${(d.concepts || []).map(c => `<code>${c}</code>`).join(' ') || '—'}</div></div>
-    ${(d.files && d.files.length) ? `<div class="dsec"><h4>Files</h4>${d.files.map(f => `<div class="dfile">${f}</div>`).join('')}</div>` : ''}`;
-  drawer.classList.add('show');
-  document.getElementById('overlay').classList.add('show');
-  body.querySelector('#drawerClose').addEventListener('click', closeDrawer);
-  body.querySelectorAll('.drel').forEach(el => el.addEventListener('click', () => openDetail(el.dataset.aid)));
-}
-function closeDrawer() {
-  document.getElementById('drawer').classList.remove('show');
-  document.getElementById('overlay').classList.remove('show');
-}
-function prettyId(id) {
-  if (id === 'leadScoring') return 'LeadScoringService';
-  if (id === 'accountService') return 'AccountService';
-  if (id === 'opportunityService') return 'OpportunityService';
-  if (id === 'campaignService') return 'CampaignService';
-  if (id === 'activityService') return 'ActivityService';
-  if (id === 'processAutomation') return 'ProcessAutomationService';
-  if (id === 'forecastingService') return 'ForecastingService';
-  if (id === 'reportingService') return 'ReportingService';
-  if (id === 'integrationService') return 'IntegrationService';
-  if (id === 'certificationPrep') return 'CertificationPrepService';
-  return id;
+/* ------------------------- confetti ------------------------- */
+
+function confetti() {
+  const colors = ['#00A1E0', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#e8b93d'];
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement('i');
+    p.className = 'confetti';
+    const x = Math.random() * 100;
+    const d = Math.random() * 2.4 + 1.2;
+    const s = 8 + Math.random() * 8;
+    p.style.left = x + '%';
+    p.style.background = colors[i % colors.length];
+    p.style.animationDuration = d + 's';
+    p.style.width = p.style.height = s + 'px';
+    p.style.setProperty('--tx', (Math.random() * 160 - 80) + 'px');
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), d * 1000 + 400);
+  }
 }
 
-/* Register object + platform entries in DETAILS so chips resolve. */
-OBJECTS.forEach(o => {
-  DETAILS['obj-' + o.name] = {
-    title: o.name, type: o.group + ' object', phase: o.group === 'Custom' ? 8 : 1,
-    icon: o.icon, desc: o.desc,
-    files: o.group === 'Custom' ? [`force-app/main/default/objects/${o.name}.object-meta.xml`] : ['Standard object'],
-    concepts: o.fields.map(f => f),
-  };
-});
-DETAILS.reports = { title: '7 Reports', type: 'Analytics · Phase 9', desc: 'Pipeline by Forecast Category, Revenue by Territory, Lead Conversion, Campaign ROI, Activity Summary, Account Health, Win Rate.', files: ['force-app/main/default/reports/'] };
-DETAILS.dashboards = { title: '4 Dashboards', type: 'Analytics · Phase 9', desc: 'Sales Performance, Revenue Analytics, Quota Attainment, Pipeline Coverage.', files: ['force-app/main/default/dashboards/'] };
-DETAILS.event = { title: 'Integration_Event__e', type: 'Platform Event · Phase 10', desc: 'Decoupled async signal published by IntegrationService after external calls.', files: ['force-app/main/default/platformEvents/Integration_Event__e.platformEvent-meta.xml'], concepts: ['EventBus.publish', 'trigger-less subscribers'] };
-DETAILS.mdt = { title: 'API_Configuration__mdt', type: 'Custom Metadata · Phase 10', desc: 'Read-only endpoint configuration consumed by IntegrationService.', files: ['force-app/main/default/customMetadata/'], concepts: ['Custom Metadata Type', 'deployable config'] };
+/* ------------------------- events wiring ------------------------- */
 
-/* ---------- tabs & search wiring ---------- */
-document.querySelectorAll('.tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.tab = btn.dataset.tab;
-    renderTab();
-    window.dispatchEvent(new CustomEvent('tabchange'));
-  });
+document.addEventListener('click', e => {
+  const sc = e.target.closest('.selfcheck');
+  if (sc) {
+    const a = $('.sc-a', sc); const btn = $('.showA', sc);
+    if (a.hidden) { a.hidden = false; btn.textContent = 'Hide answer'; }
+    else { a.hidden = true; btn.textContent = 'Show answer'; }
+    return;
+  }
+  const copy = e.target.closest('.cb-copy');
+  if (copy) {
+    const pre = document.getElementById(copy.dataset.copy);
+    if (pre) {
+      const txt = pre.innerText;
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+        .then(() => { copy.textContent = '✓ Copied'; setTimeout(() => copy.textContent = '⧉ Copy', 1400); })
+        .catch(() => { /* fallback select */ const r = document.createRange(); r.selectNodeContents(pre); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); copy.textContent = '✓ Copied'; setTimeout(() => copy.textContent = '⧉ Copy', 1400); });
+    }
+  }
 });
 
-document.getElementById('overlay').addEventListener('click', closeDrawer);
+/* search */
+let searchBox = null;
+function ensureSearch() {
+  if (searchBox) return searchBox;
+  searchBox = document.createElement('div');
+  searchBox.className = 'search-wrap';
+  searchBox.innerHTML = `<input id="globalQ" type="search" placeholder="Search lessons, concepts, topics…" autocomplete="off" />
+    <div class="search-results" id="searchRes"></div>`;
+  document.body.appendChild(searchBox);
+
+  const input = $('#globalQ', searchBox);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const first = $('.sr-item', wrap);
+      if (first) { location.hash = first.getAttribute('href'); closeSearch(); }
+    }
+    if (e.key === 'Escape') closeSearch();
+  });
+
+  const wrap = $('#searchRes', searchBox);
+  input.addEventListener('input', runSearch);
+  input.addEventListener('focus', () => { if (input.value.trim().length >= 2) searchBox.classList.add('open'); });
+  return searchBox;
+}
+
+function runSearch() {
+  const sb = searchBox || ensureSearch();
+  const input = $('#globalQ', sb);
+  const wrap = $('#searchRes', sb);
+  const q = input.value.trim().toLowerCase();
+  wrap.innerHTML = '';
+  if (q.length < 2) { sb.classList.remove('open'); return; }
+
+  const results = [];
+  MODULES.forEach(m => {
+    m.lessons.forEach((l, i) => {
+      const hay = (m.title + ' ' + m.tagline + ' ' + l.title + ' ' + m.objectives.join(' ') + ' ' + l.blocks.map(bd => bd.x || (bd.items || []).join(' ')).join(' ')).toLowerCase();
+      if (hay.includes(q) || m.title.toLowerCase().includes(q)) {
+        results.push({ mod: m, li: i, label: m.title + ' → ' + l.title });
+      }
+    });
+    m.quiz.questions.forEach(qq => {
+      if ((qq.q + ' ' + qq.why).toLowerCase().includes(q)) {
+        results.push({ mod: m, quiz: true, label: `Quiz · ${m.title}: "${qq.q.slice(0, 60)}…"` });
+      }
+    });
+  });
+  const seen = new Set(); const uniq = [];
+  results.forEach(r => { const k = r.quiz ? 'q' + r.label : r.mod.id + ':' + r.li; if (!seen.has(k)) { seen.add(k); uniq.push(r); } });
+  if (!uniq.length) { wrap.innerHTML = '<div class="sr-empty">No results — try "lead", "flow", "report", "quota"…</div>'; }
+  else {
+    uniq.slice(0, 10).forEach(r => {
+      const a = document.createElement('a');
+      a.className = 'sr-item';
+      a.href = r.quiz ? '#/quiz/' + r.mod.id : '#/lesson/' + r.mod.id + '/' + r.li;
+      a.innerHTML = `<span class="sr-ico">${r.quiz ? '🧠' : r.mod.icon}</span><span>${r.label}</span><span class="sr-go">→</span>`;
+      a.addEventListener('click', closeSearch);
+      wrap.appendChild(a);
+    });
+  }
+  sb.classList.add('open');
+}
+
+function openSearch() {
+  const sb = ensureSearch();
+  sb.classList.add('open');
+  const inp = $('#globalQ', sb);
+  inp.focus();
+  const top = $('#topSearch');
+  if (top) { inp.value = top.value; }
+  runSearch();
+}
+function closeSearch() {
+  if (searchBox) { searchBox.classList.remove('open'); const inp = $('#globalQ', searchBox); inp.value = ''; }
+}
+
+/* hotkey */
 window.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeDrawer();
-  if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
-    e.preventDefault(); document.getElementById('q').focus();
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA');
+  if ((e.key === '/' || e.key === 'f') && !e.ctrlKey && !e.metaKey) {
+    if (!typing) { e.preventDefault(); openSearch(); }
+    return;
   }
-  if (e.key === 'Enter' && document.activeElement.id === 'q') {
-    const tab = document.querySelector(`[data-tab="${state.tab}"]`);
-    if (tab) tab.click(); // jump re-renders; keeps search simple
+  if (e.key === 'Escape') {
+    if (searchBox && searchBox.classList.contains('open')) { closeSearch(); e.preventDefault(); return; }
+  }
+  if (e.key === 'ArrowLeft' && !typing && route.view === 'lesson') {
+    const mod = byId(route.mid);
+    if (route.li > 0) navigate('lesson', route.mid, route.li - 1);
+  }
+  if (e.key === 'ArrowRight' && !typing && route.view === 'lesson') {
+    const mod = byId(route.mid);
+    if (route.li < mod.lessons.length - 1) navigate('lesson', route.mid, route.li + 1);
   }
 });
 
-/* Search — dims non-matching cards in the current tab. */
-document.getElementById('q').addEventListener('input', e => {
-  const q = e.target.value.trim().toLowerCase();
-  const count = document.getElementById('searchCount');
-  const cards = view.querySelectorAll('.card, .chip, .step');
-  let hits = 0;
-  cards.forEach(c => {
-    const hay = (c.textContent || '').toLowerCase() + ' ' + (c.dataset.search || '');
-    const match = !q || hay.includes(q);
-    c.classList.toggle('off', !match);
-    if (match) hits++;
+function bindTopSearch() {
+  const topQ = $('#topSearch');
+  if (!topQ || topQ.dataset.bound) return;
+  topQ.dataset.bound = '1';
+  topQ.addEventListener('focus', () => {
+    const sb = ensureSearch();
+    sb.classList.add('open');
+    $('#globalQ', sb).value = topQ.value;
+    runSearch();
   });
-  if (!q) cards.forEach(c => c.classList.remove('off'));
-  count.textContent = q ? `${hits} hits` : '';
-});
+  topQ.addEventListener('input', () => {
+    const sb = ensureSearch();
+    sb.classList.add('open');
+    $('#globalQ', sb).value = topQ.value;
+    runSearch();
+  });
+}
 
-/* Redraw wiring links when resized or switching tabs. */
-let resizeT;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeT);
-  resizeT = setTimeout(() => { if (state.tab === 'wire') connectWiring(); }, 120);
-});
-window.addEventListener('tabchange', () => { if (state.tab === 'wire') requestAnimationFrame(connectWiring); });
+/* ------------------------- lazy event (hashchange) ------------------------- */
+window.addEventListener('hashchange', () => { route = parseHash(); render(); });
 
-/* Boot */
-renderTab();
+/* ------------------------- boot ------------------------- */
+route = parseHash();
+render();
+
+/* mobile menu */
+const menuBtn = $('#menuBtn');
+if (menuBtn) {
+  menuBtn.addEventListener('click', () => {
+    document.body.classList.toggle('sb-open');
+    if (document.body.classList.contains('sb-open')) {
+      const first = $('.side-phase');
+      if (first) first.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  });
+}
+document.addEventListener('click', e => {
+  if (document.body.classList.contains('sb-open') && !e.target.closest('.sidebar') && !e.target.closest('#menuBtn')) {
+    document.body.classList.remove('sb-open');
+  }
+});
