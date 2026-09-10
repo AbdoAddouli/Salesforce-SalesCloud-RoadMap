@@ -35,6 +35,10 @@ Curious how it all fits together? See **[ARCHITECTURE.md](./ARCHITECTURE.md)** f
 - End-to-end sales process flow
 - Integration & certification-prep architectures
 
+> **🎮 Interactive version** — explore the architecture live at
+> **[`https://abdoaddouli.github.io/Salesforce-SalesCloud-RoadMap/`](https://abdoaddouli.github.io/Salesforce-SalesCloud-RoadMap/)**
+> built from `docs/` (clickable layers, searchable components, simulators).
+
 ---
 
 ## 🧭 The 20-Week Learning Roadmap

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Cloud RoadMap — Interactive Architecture</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☁️</text></svg>" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">☁️</div>
+      <div>Sales Cloud RoadMap<span>Interactive Architecture</span></div>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <button class="tab active" data-tab="overview">Layers</button>
+      <button class="tab" data-tab="data">Data Model</button>
+      <button class="tab" data-tab="wire">Wiring</button>
+      <button class="tab" data-tab="flow">Sales Flow</button>
+      <button class="tab" data-tab="integ">Integrations</button>
+      <button class="tab" data-tab="phases">Phases</button>
+    </nav>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search components…  ( / to focus, Enter to jump)" autocomplete="off" />
+      <span class="kbd">/</span>
+      <span id="searchCount"></span>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <footer>
+    <a href="https://github.com/AbdoAddouli/Salesforce-SalesCloud-RoadMap" target="_blank" rel="noopener">AbdoAddouli/Salesforce-SalesCloud-RoadMap</a>
+    · Salesforce Sales Cloud learning roadmap · API 68.0
+  </footer>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer">
+    <div id="drawerBody"></div>
+  </aside>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
